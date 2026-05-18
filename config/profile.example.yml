@@ -1,0 +1,74 @@
+# Signal Hunter — Your Profile
+# ─────────────────────────────────────────────────────────────────────────────
+# Run `signal-hunter setup` and this is created automatically.
+# OR copy this to config/profile.yml and fill it in manually.
+#
+# This file stays LOCAL to you. Never gets sent anywhere.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "1"
+
+identity:
+  name: "Your Name"
+  email: "you@example.com"
+  type: freelancer            # freelancer | agency | both
+
+# ── What you offer ────────────────────────────────────────────────────────────
+services:
+  # One line summary — the AI uses this to understand your context
+  what_you_do: "Discord bot development, n8n workflow automation, AI integrations"
+
+  # Plain English: describe the PAIN your clients have, not your skills
+  # The AI understands intent — don't just list keywords
+  buying_signals: >
+    People struggling with manual repetitive workflows they want to automate.
+    Communities or startups that need a Discord bot for moderation or engagement.
+    Businesses wanting to connect their tools (CRM, Slack, Notion) without code.
+    Anyone frustrated with Zapier costs and looking for n8n alternatives.
+
+  # The AI filters these out immediately — no matter how good the budget is
+  red_flags:
+    - equity only
+    - revenue share
+    - unpaid test project
+    - blockchain
+    - crypto token
+    - web3
+    - nft
+
+  # Signals below this budget get flagged as low-priority (not removed)
+  budget_min: "$500"
+
+# ── AI Brain ──────────────────────────────────────────────────────────────────
+llm:
+  provider: gemini            # gemini | openai | claude | ollama
+  model: gemini-flash-latest     # model name — must match your provider
+
+  # Scoring threshold: signals below this score are hidden from default list
+  # 0-100 scale. 60 = decent match, 80 = strong match
+  min_score: 60
+
+# ── Sources ───────────────────────────────────────────────────────────────────
+sources:
+  enabled:
+    - hackernews
+    - reddit
+    - remoteok
+
+  reddit:
+    subreddits:
+      - forhire
+      - freelance
+      - webdev
+      - startups
+      - entrepreneur
+      - smallbusiness
+
+# ── Notifications ─────────────────────────────────────────────────────────────
+# These are also set via .env — profile.yml acts as a reference.
+notifications:
+  discord_webhook: ""         # paste webhook URL or leave blank
+  email: ""                   # daily digest email (optional)
+
+  # Only notify for signals above this score (avoids noise)
+  notify_min_score: 70

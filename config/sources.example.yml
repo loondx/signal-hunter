@@ -1,0 +1,61 @@
+# Signal Hunter — Source Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+# Advanced config — your profile.yml handles the basics.
+# Copy this to config/sources.yml to customize individual sources.
+#
+# IMPORTANT: The AI understands INTENT, not keywords.
+# You don't need to list every possible keyword — describe the problem
+# your clients have and the AI handles the matching.
+# ─────────────────────────────────────────────────────────────────────────────
+
+sources:
+
+  hackernews:
+    enabled: true
+    # Monthly "Who is Hiring?" thread — very high signal for tech services
+    monthly_hiring_thread: true
+    # Scan recent Ask HN / comments for buying intent
+    scan_comments: false          # set true for more volume (more noise too)
+    posts_per_scan: 30
+
+  reddit:
+    enabled: true
+    scan_mode: new                # new | hot | top
+    posts_per_scan: 10            # per subreddit per run
+    # Subreddits come from profile.yml — add extras here
+    extra_subreddits: []
+    #   - consulting
+    #   - digitalnomad
+
+  remoteok:
+    enabled: true
+    # Remote OK has a completely open JSON API — zero cost, no auth needed
+    # https://remoteok.com/api
+    posts_per_scan: 20
+
+  twitter:
+    enabled: false
+    # Requires TWITTER_BEARER_TOKEN in .env
+    # Free tier: 500k tweet reads/month — more than enough
+    queries:
+      # These are passed directly to Twitter's search API
+      # The AI re-evaluates the results — these are broad nets
+      - "looking for developer freelance"
+      - "need automation help"
+      - "zapier alternative"
+      - "n8n help"
+      - "discord bot needed"
+    posts_per_scan: 20
+
+  custom_urls:
+    enabled: false
+    # Monitor any webpage — uses Jina.ai reader (free, no auth, no API key)
+    # Good for: niche forums, Slack community job boards, curated lists
+    # Usage: prepends https://r.jina.ai/ to extract clean markdown from any URL
+    urls:
+      - url: "https://weworkremotely.com/categories/remote-full-stack-programming-jobs"
+        label: "We Work Remotely"
+        scan_interval: 60         # minutes between checks
+      - url: "https://remotive.com/remote-jobs/software-dev"
+        label: "Remotive Dev Jobs"
+        scan_interval: 120

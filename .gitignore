@@ -1,0 +1,20 @@
+node_modules/
+
+# User config — never commit real config, only examples
+config/profile.yml
+config/businesses.yml
+config/sources.yml
+
+# API keys
+.env
+
+# Signal pipeline data — this is YOUR private data
+data/signals.md
+data/scan-history.tsv
+
+# Logs
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

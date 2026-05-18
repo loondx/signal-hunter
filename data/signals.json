@@ -1,0 +1,40 @@
+[
+  {
+    "num": 1,
+    "id": "reddit_test_001",
+    "source": "Reddit r/forhire",
+    "text": "[FOR HIRE] Need a Discord bot developer urgently. I run a gaming community of 5,000+ members and need a bot with ticket systems, role assignment, and moderation features. Budget: $800-1500. Timeline: 2 weeks. DM me if interested.",
+    "url": "https://www.reddit.com/r/forhire/test001",
+    "author": "u/gamingcommunity_owner",
+    "posted_at": "2026-05-18T17:44:22.210Z",
+    "score": 92,
+    "is_red_flag": false,
+    "business_match": null,
+    "reasoning": "Clear Discord bot request with explicit budget, specific requirements, and urgency — perfect fit.",
+    "budget_hint": "$800-1500",
+    "urgency": "urgent",
+    "outreach_angle": "I specialize in Discord bots for gaming communities — I've built ticket systems, role management, and moderation tools for communities similar to yours. Happy to hop on a quick call to scope this out.",
+    "status": "replied",
+    "saved_at": "2026-05-18T17:44:22.211Z",
+    "updated_at": "2026-05-18T17:44:30.794Z"
+  },
+  {
+    "num": 2,
+    "id": "hn_test_002",
+    "source": "Hacker News",
+    "text": "Ask HN: Our Zapier workflows are breaking constantly and costing us $300/month. Looking for someone to help us migrate everything to n8n or a custom solution. About 20 workflows across Slack, Airtable, and HubSpot.",
+    "url": "https://news.ycombinator.com/item?id=test002",
+    "author": "user_hn",
+    "posted_at": "2026-05-18T17:44:22.211Z",
+    "score": 87,
+    "is_red_flag": false,
+    "business_match": null,
+    "reasoning": "Explicit automation pain point with budget context and specific tools — strong freelance signal.",
+    "budget_hint": "$300/month current spend + migration project",
+    "urgency": "normal",
+    "outreach_angle": "I've migrated several Zapier setups to n8n — I can audit your 20 workflows and give you a fixed-price quote for the migration. Most projects like this take 1-2 weeks.",
+    "status": "skipped",
+    "saved_at": "2026-05-18T17:44:22.211Z",
+    "updated_at": "2026-05-18T17:44:34.287Z"
+  }
+]

@@ -1,0 +1,68 @@
+{
+  "name": "signal-hunter",
+  "version": "0.1.0",
+  "description": "AI agent that hunts buying signals across the internet for freelancers and service businesses",
+  "type": "module",
+  "bin": {
+    "signal-hunter": "./bin/cli.js",
+    "signal-hunter-mcp": "./mcp-server.mjs"
+  },
+  "scripts": {
+    "setup":  "node setup.mjs",
+    "doctor": "node doctor.mjs",
+    "scan":   "node scan.mjs",
+    "list":   "node list.mjs",
+    "cron":   "node cron-daemon.mjs",
+    "mcp":    "node mcp-server.mjs",
+    "start":  "node cron-daemon.mjs"
+  },
+  "files": [
+    "bin/",
+    "agents/",
+    "sources/",
+    "integrations/",
+    "utils/",
+    "modes/",
+    "config/*.example.yml",
+    "data/.gitkeep",
+    "setup.mjs",
+    "doctor.mjs",
+    "scan.mjs",
+    "list.mjs",
+    "cron.mjs",
+    "cron-daemon.mjs",
+    "manage.mjs",
+    "mcp-server.mjs",
+    ".env.example",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "ai-agent",
+    "lead-generation",
+    "signal-detection",
+    "freelance",
+    "mcp",
+    "buying-signals",
+    "business-development",
+    "open-source"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^0.9.0",
+    "@google/generative-ai": "^0.24.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "js-yaml": "^4.1.0",
+    "node-cron": "^4.2.1",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

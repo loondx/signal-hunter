@@ -1,0 +1,59 @@
+# Signal Hunter — Partner Businesses
+# ─────────────────────────────────────────────────────────────────────────────
+# Use this when you want to route signals to different people in your network.
+# Each business only gets notified about signals that match THEIR services.
+#
+# Copy this to config/businesses.yml to activate multi-business routing.
+# If this file doesn't exist, all signals go to your profile.yml contact.
+# ─────────────────────────────────────────────────────────────────────────────
+
+businesses:
+  - id: pankaj-automation
+    name: "Pankaj — Bot Dev & Automation"
+    contact:
+      email: pankaj@example.com
+      discord_webhook: ""       # their personal webhook, not a shared channel
+    services:
+      - Discord bot development
+      - n8n and Zapier automation
+      - AI agent integrations
+      - Webhook and API work
+    # Plain English — AI understands intent, not just keywords
+    buying_signals:
+      - people struggling with manual repetitive tasks
+      - communities that need Discord bots or moderation tools
+      - startups wanting to add AI features to their product
+      - anyone frustrated with their Zapier or Make.com setup
+      - needing to connect APIs or build custom integrations
+
+  - id: alex-devops
+    name: "Alex — DevOps & Cloud Infrastructure"
+    contact:
+      email: alex@example.com
+      discord_webhook: ""
+    services:
+      - Kubernetes and container setup
+      - CI/CD pipeline automation
+      - AWS / GCP / Azure infrastructure
+      - Docker and deployment pipelines
+    buying_signals:
+      - deployment issues or CI/CD pipelines breaking
+      - looking for a DevOps consultant or contractor
+      - scaling infrastructure and don't know where to start
+      - Docker or Kubernetes confusion
+      - startup getting too much traffic and infrastructure can't handle it
+
+  - id: sarah-design
+    name: "Sarah — UI/UX & Product Design"
+    contact:
+      email: sarah@example.com
+      discord_webhook: ""
+    services:
+      - UI/UX design for web and mobile
+      - Figma prototypes and design systems
+      - Brand identity and visual design
+    buying_signals:
+      - product that looks unprofessional or needs a redesign
+      - needing a designer before a fundraise or launch
+      - looking for Figma help or design system work
+      - startup that built an MVP and now needs real UI
