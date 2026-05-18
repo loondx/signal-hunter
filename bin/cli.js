@@ -28,6 +28,7 @@ const HELP = `
   ${pc.bold('Core:')}
     ${pc.cyan('setup')}                    Interactive setup wizard ${pc.dim('(run this first)')}
     ${pc.cyan('doctor')}                   Check config, API keys, connectivity
+    ${pc.cyan('doctor --test-discord')}    Send a real test message to your Discord webhook
     ${pc.cyan('scan')}                     Scan all sources for new buying signals
     ${pc.cyan('list')}                     View your signal pipeline
 

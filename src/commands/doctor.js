@@ -20,6 +20,72 @@ const ok   = (msg)       => ({ pass: true,  msg });
 const fail = (msg, hint) => ({ pass: false, msg, hint });
 const warn = (msg, hint) => ({ pass: null,  msg, hint });
 
+// ── --test-discord: send a real test embed and exit ───────────────────────────
+if (process.argv.includes('--test-discord')) {
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+    console.log('');
+
+    if (!webhookUrl) {
+        console.log(`  ${pc.red('✗')}  DISCORD_WEBHOOK_URL is not set in .env`);
+        console.log(`     ${pc.dim('Add: DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...')}`);
+        console.log('');
+        process.exit(1);
+    }
+
+    if (!webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+        console.log(`  ${pc.red('✗')}  Webhook URL looks wrong — must start with https://discord.com/api/webhooks/`);
+        console.log(`     ${pc.dim(`Got: ${webhookUrl.slice(0, 60)}`)}`);
+        console.log('');
+        process.exit(1);
+    }
+
+    const s = p.spinner();
+    s.start('Sending test message to Discord...');
+
+    try {
+        const res = await fetch(webhookUrl, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title:       '🎯 Signal Hunter — Test Notification',
+                    color:       0x00C853,
+                    description: 'Your Discord webhook is working correctly.',
+                    fields: [
+                        { name: '✉️ Outreach Angle', value: 'This is what a real signal notification looks like.', inline: false },
+                        { name: '💰 Budget Hint',    value: '$1,000 – $5,000',  inline: true },
+                        { name: '📊 Score',          value: '87 / 100',         inline: true },
+                    ],
+                    footer:    { text: 'Signal Hunter • signal-hunter doctor --test-discord' },
+                    timestamp: new Date().toISOString(),
+                }],
+            }),
+        });
+
+        if (res.ok) {
+            s.stop(`${pc.green('✓')}  Test message sent — check your Discord channel.`);
+            console.log('');
+        } else {
+            const body = await res.text().catch(() => '');
+            s.stop(`${pc.red('✗')}  Discord returned HTTP ${res.status}`);
+            console.log(`     ${pc.dim(body.slice(0, 200))}`);
+            console.log(`\n  ${pc.yellow('Common causes:')}`);
+            console.log(`     ${pc.dim('• Webhook was deleted in Discord (re-create it in channel settings)')}`);
+            console.log(`     ${pc.dim('• Wrong URL copied — regenerate and update .env')}`);
+            console.log('');
+            process.exit(1);
+        }
+    } catch (err) {
+        s.stop(`${pc.red('✗')}  Network error: ${err.message}`);
+        console.log('');
+        process.exit(1);
+    }
+
+    process.exit(0);
+}
+
+// ── Standard health checks ────────────────────────────────────────────────────
+
 console.log('');
 p.intro(pc.bgYellow(pc.black('  Signal Hunter — Health Check  ')));
 
@@ -113,12 +179,15 @@ if (profile?.sources?.enabled) {
 const discordWebhook = process.env.DISCORD_WEBHOOK_URL || profile?.notifications?.discord_webhook;
 if (discordWebhook) {
     if (discordWebhook.startsWith('https://discord.com/api/webhooks/')) {
-        results.push(ok('Discord webhook configured'));
+        results.push(ok(`Discord webhook configured  ${pc.dim('(run: signal-hunter doctor --test-discord to verify it works)')}`));
     } else {
         results.push(fail('Discord webhook URL looks invalid', 'Must start with https://discord.com/api/webhooks/'));
     }
 } else {
-    results.push(warn('Discord webhook not set (optional)', 'Add DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/... to .env'));
+    results.push(warn(
+        'Discord webhook not set (optional)',
+        'Add DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/... to .env\nThen run: signal-hunter doctor --test-discord'
+    ));
 }
 
 // 8. businesses.yml (optional)
