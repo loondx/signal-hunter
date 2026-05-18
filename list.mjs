@@ -63,11 +63,13 @@ for (const s of signals) {
     const statusClr = STATUS_C[s.status] || (x => x);
     const date      = (s.saved_at || '').split('T')[0];
 
-    // Header row
+    // Header row — apply color AFTER padEnd so ANSI bytes don't break alignment
+    const sourcePad = (s.source || '').substring(0, 24).padEnd(24);
+    const statusPad = (s.status || 'new').padEnd(8);
     console.log(
         `  ${scoreClr(`[${scoreStr}]`)} ${urgIcon}  ` +
-        `${pc.bold(s.source || '').substring(0, 24).padEnd(24)}  ` +
-        `${statusClr((s.status || 'new').padEnd(8))}  ` +
+        `${pc.bold(sourcePad)}  ` +
+        `${statusClr(statusPad)}  ` +
         pc.dim(date)
     );
 
