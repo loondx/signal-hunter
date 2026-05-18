@@ -16,177 +16,323 @@
 
 Job boards show you listings **200 people already applied to**.
 
-Signal Hunter watches Reddit, Hacker News, and Remote OK for moments where someone publicly expresses a need your business can solve — **before they ever post a hiring ad**.
+Signal Hunter watches Reddit, Hacker News, Remote OK, and custom sources for moments where someone publicly expresses a pain your business can solve — before they ever post a job ad. The AI scores each one 0–100 for buying intent, tells you exactly what to say, and pings you on Discord when a strong one appears.
 
 ```
-Signal Hunter found 3 new signals while you slept:
+  [ 91] 🔥  Reddit r/smallbusiness     new    2026-05-19
+            "We're drowning in manual Slack updates — paying $400/mo for Zapier
+             and it still breaks every week…"
+            ↳ Explicit automation pain + current spend = real budget. High urgency.
+            💰 ~$400/month current Zapier spend
+            ✉  "I rebuilt a similar Zapier flow in n8n for a SaaS team last month
+                and cut their cost to zero — happy to show you what that looks like."
 
-  [87] 🔥 Reddit r/webdev — "Our Zapier workflows keep breaking, losing hours/week"
-       → Someone frustrated with automation. Budget signals present. Respond today.
-
-  [74] 📌 Reddit r/smallbusiness — "Looking for someone to build a Discord bot for our community"
-       → Clear request, explicit scope. Good fit for Discord bot dev services.
-
-  [68] ·  Hacker News — "How do I connect Airtable to Slack without Zapier?"
-       → DIY question that often converts to "just hire someone". Worth monitoring.
-```
-
-```bash
-$ signal-hunter list
-
-  Signal Hunter — Pipeline
-  3 signal(s)
-
-  [ 87] 🔥  Reddit r/webdev           new    2026-05-19
-            Our Zapier workflows keep breaking, losing us hours every week…
-            ↳ Explicit automation pain point with budget signals — strong lead.
-            💰 ~$300/month Zapier spend currently
-
-  [ 74] 📌  Reddit r/smallbusiness    new    2026-05-19
-            Looking for someone to build a Discord bot for our community…
+  [ 78] 📌  HN — Who's Hiring?         new    2026-05-19
+            "Contractor wanted — Discord bot for 50k member community, $2–5k budget"
+            ↳ Explicit budget, explicit scope. Apply today.
+            💰 $2,000 – $5,000
 ```
 
 ---
 
-## Why this exists
+## How it works
 
-I was manually scanning Reddit, Hacker News, and job boards every morning looking for freelance leads. After building this, the agent does it for me every 30 minutes — and only surfaces the ones worth reading.
-
-**The difference:** Traditional job boards surface demand *after* it's public. Signal Hunter catches intent signals *as they appear* — someone complaining about broken automation, asking how to connect their tools, or explicitly posting "looking for a developer." You respond first.
+1. Every 30 minutes: fetches posts from Reddit, Hacker News, Remote OK (no auth needed)
+2. Pre-filter rejects obvious mismatches instantly — zero AI cost
+3. Remaining candidates are scored by an LLM against your profile
+4. Anything above your threshold is saved, and you get a Discord ping
+5. You run `signal-hunter reply <num>` — it shows the post + a personalised outreach opener
+6. You reply within the hour. You win the client.
 
 ---
 
 ## Quick Start
 
-**One command** — installs to `~/.signal-hunter`, adds `signal-hunter` to your PATH:
-
 ```bash
+# One command — installs to ~/.signal-hunter, adds signal-hunter to PATH
 curl -fsSL https://raw.githubusercontent.com/loondx/signal-hunter/main/install.sh | bash
 ```
 
-Then follow the prompts:
-
 ```bash
-signal-hunter setup     # 2-minute wizard — API key, sources, notifications
-signal-hunter doctor    # verify everything is working
+signal-hunter setup     # 2-minute wizard: API key, sources, notifications
+signal-hunter doctor    # verify everything works
 signal-hunter scan      # find your first signals
 ```
 
-> **No account. No server. No credit card.** Works on any machine or VPS with Node.js 20+.
-> Each user installs their own instance — your data never leaves your machine.
+> **No account. No server. No credit card.**  
+> Everything runs on your own machine. Your data stays local.
 
-### Manual install (alternative)
-
-```bash
-git clone https://github.com/loondx/signal-hunter ~/.signal-hunter
-cd ~/.signal-hunter && npm install
-~/.signal-hunter/bin/cli.js setup
-```
-
-### Update
-
-```bash
-signal-hunter update    # pulls latest code from GitHub
-```
-
----
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| **Intent Detection** | AI scores buying intent 0–100 — not keyword matching |
-| **Multi-Source** | Reddit (RSS), Hacker News, Remote OK, Twitter/X, custom URLs |
-| **Zero-Token Scan** | Sources fetched without AI — LLM only runs on matched candidates |
-| **Multi-Business Routing** | Route signals to the right person in your team via `businesses.yml` |
-| **Built-in Scheduler** | `cron start` — background daemon, survives terminal close |
-| **MCP Server** | Use Signal Hunter directly inside Claude Code, Cursor, VS Code |
-| **Discord / Email** | Webhook notification when high-score signal found |
-| **Private by Default** | Config, leads, API keys never leave your machine |
-| **Multi-LLM** | Gemini (free tier), OpenAI, Claude, or Ollama (local, free) |
-
----
-
-## Installation
-
-### Prerequisites
-
-- Node.js 20+ — [nodejs.org](https://nodejs.org)
-- An API key for one LLM (Gemini has a free tier — [aistudio.google.com](https://aistudio.google.com))
-
-### Install globally (recommended)
+**Or install via npm:**
 
 ```bash
 npm install -g signal-hunter
 signal-hunter setup
 ```
 
-### Clone and run locally
+---
+
+## The Signal Quality Playbook
+
+> The tool is only as good as your profile. Most people write vague signals and get vague leads. This section is the most important thing to read.
+
+### Write signals as client pain — not your skills
+
+The AI reads your profile in plain English. Describe the problems your clients have, not what you can do.
+
+❌ **Weak — produces noise:**
+```yaml
+services:
+  what_you_do: "I do automation, Discord bots, AI stuff"
+  buying_signals: "people who need bots or automation"
+```
+
+✅ **Strong — produces real leads:**
+```yaml
+services:
+  what_you_do: "Discord bots and n8n workflow automation for startups and communities"
+
+  buying_signals: >
+    People saying their Zapier or Make workflows keep breaking or are too expensive.
+    Community owners who need a Discord bot for welcome messages, role assignment,
+    moderation, or engagement — and don't want to pay $50/month for a SaaS bot.
+    Startups doing repetitive data entry or status updates manually across Notion,
+    Slack, Airtable, or Google Sheets.
+    Anyone asking how to connect two specific tools without code.
+
+  red_flags:
+    - equity only
+    - revenue share
+    - unpaid test project
+    - "small budget"
+    - blockchain / crypto / web3 / NFT
+    - looking for co-founder
+    - needs full-time commitment
+```
+
+### Set a high score threshold
+
+Start at `min_score: 70`. Drop it later if volume is too low — never lower than 60.
+
+```yaml
+llm:
+  min_score: 70       # don't review below this
+notifications:
+  notify_min_score: 80  # only ping Discord for the strongest ones
+```
+
+### Pick the right subreddits
+
+These produce the highest-quality leads consistently:
+
+```yaml
+sources:
+  reddit:
+    subreddits:
+      # High intent — people actively looking to hire
+      - forhire
+      - hiring
+
+      # Problem signals — people with pain you can solve
+      - smallbusiness
+      - entrepreneur
+      - startups
+      - SaaS
+
+      # Tech-specific pain signals
+      - webdev
+      - nocode
+      - zapier
+      - n8n
+
+      # Community-specific (add your niche)
+      - discordapp      # "we need a bot for our server"
+      - discord
+```
+
+### Add LinkedIn jobs via custom URLs
+
+LinkedIn's public job search pages can be monitored for freelance/contract work. Add to `config/sources.yml`:
+
+```yaml
+sources:
+  custom_urls:
+    enabled: true
+    urls:
+      # Freelance/contract Discord bot work posted in last 24h
+      - url: "https://www.linkedin.com/jobs/search/?keywords=discord+bot+freelance&f_TP=1&f_JT=C"
+        label: "LinkedIn — Discord Bot (Contract)"
+        scan_interval: 120
+
+      # n8n / automation contractor roles
+      - url: "https://www.linkedin.com/jobs/search/?keywords=n8n+automation&f_TP=1&f_JT=C"
+        label: "LinkedIn — Automation (Contract)"
+        scan_interval: 120
+
+      # We Work Remotely freelance section
+      - url: "https://weworkremotely.com/categories/remote-programming-jobs"
+        label: "We Work Remotely"
+        scan_interval: 60
+
+      # Remotive freelance listings
+      - url: "https://remotive.com/remote-jobs/software-dev"
+        label: "Remotive"
+        scan_interval: 60
+```
+
+> LinkedIn pages are public but may load inconsistently. If a URL returns empty results, try the `/jobs/freelance-jobs/` path or search by keyword.
+
+---
+
+## Daily Workflow to Win Clients
+
+This is the exact routine. The whole thing takes 15–20 minutes a day.
+
+### Morning review (5 min)
 
 ```bash
-git clone https://github.com/loondx/signal-hunter
-cd signal-hunter
-npm install
-npm run setup      # or: node src/commands/setup.js
+signal-hunter list --min-score 75 --status new
 ```
+
+Look at the top 3–5 signals. Skip anything below 75 unless the description jumps out.
+
+### For each strong signal (3–5 min each)
+
+```bash
+signal-hunter reply 4    # shows full post + AI outreach opener
+signal-hunter open 4     # opens original URL in browser
+```
+
+Read the **original post** in full. The outreach opener is a starting point — you must personalise it with something specific from their post. One sentence of personalisation beats a perfect template.
+
+### The reply formula that converts
+
+```
+Hi [name],
+
+[One sentence showing you read their specific post — mention their exact tool/problem.]
+
+[One sentence about something directly relevant you've built before.]
+
+[Soft ask — not "hire me", but something useful: a loom video, a 15-min call, or just a helpful answer to their question.]
+```
+
+**Example — from the Zapier signal above:**
+
+> Hey, saw your post about the Zapier workflows breaking. I rebuilt almost the exact same setup (Slack + Airtable + webhook chain) in n8n for a SaaS team last month — their cost went from $400/mo to zero and it hasn't broken since. Happy to share a quick Loom of how it's structured if useful, no strings.
+
+Keep it under 5 sentences. Never pitch your services upfront.
+
+### LinkedIn cross-reference (2 min per lead)
+
+When a Reddit or HN post has a username or company name:
+
+1. Search for them on LinkedIn
+2. Connect with a personalised note that references their post — don't copy your reply, write something shorter:
+   > *"Saw your post on r/smallbusiness about the Zapier costs — connected because I've solved exactly that problem. Happy to share what worked."*
+3. This turns an anonymous internet comment into a warm connection
+
+This step alone doubles conversion rate because most people never bother.
+
+### Mark your pipeline
+
+```bash
+signal-hunter reply 4    # auto-marks as replied after you view it
+signal-hunter skip 7     # hide signals you won't pursue
+```
+
+---
+
+## Automation — run it while you sleep
+
+### Recommended: built-in daemon
+
+```bash
+signal-hunter cron start --interval 30m    # runs every 30 minutes in background
+signal-hunter cron status                  # check it's running
+signal-hunter cron stop                    # stop it
+```
+
+### VPS / server (survives reboots)
+
+```bash
+# PM2 — auto-restarts on crash, survives reboots
+npm install -g pm2
+pm2 start src/daemon.js --name signal-hunter -- --interval 30m
+pm2 save && pm2 startup
+
+# Or: systemd / crontab — run: signal-hunter cron install
+```
+
+Set up a Discord webhook so you get pinged when a strong signal appears — you can reply within the hour without ever opening the terminal.
 
 ---
 
 ## Commands
 
 ```bash
-signal-hunter setup              # Interactive setup wizard (run this first)
-signal-hunter doctor             # Check config and API keys
-signal-hunter scan               # Scan all sources for new signals
-signal-hunter scan --source reddit        # Single source only
-signal-hunter scan --source hackernews
-signal-hunter scan --dry-run             # Qualify without saving
-signal-hunter scan --min-score 30        # Override score threshold for this run
-signal-hunter list                       # View pipeline sorted by score
-signal-hunter list --min-score 70        # Filter by score
-signal-hunter list --status new          # Filter by status
-signal-hunter reply <num>                # Show outreach angle, mark replied
-signal-hunter skip  <num>                # Hide from pipeline
-signal-hunter open  <num>                # Open URL in browser
-signal-hunter cron start                 # Start background scan daemon
-signal-hunter cron start --interval 1h  # Custom interval
-signal-hunter cron stop                  # Stop daemon
-signal-hunter cron status                # Check if running
-signal-hunter cron logs                  # Tail last 50 log lines
-signal-hunter cron install               # Print crontab/PM2/systemd configs
+# Setup
+signal-hunter setup              # interactive wizard (run this first)
+signal-hunter doctor             # check config, API keys, connectivity
+
+# Scanning
+signal-hunter scan               # scan all sources
+signal-hunter scan --source reddit          # single source
+signal-hunter scan --dry-run               # qualify without saving
+signal-hunter scan --min-score 50          # lower threshold for this run only
+
+# Pipeline
+signal-hunter list                          # view all signals, sorted by score
+signal-hunter list --min-score 75           # filter by score
+signal-hunter list --status new             # filter: new | replied | skipped
+signal-hunter list --source reddit          # filter by source
+signal-hunter list --limit 10              # limit results
+
+# Signal actions
+signal-hunter reply <num>       # view full signal + outreach angle, mark replied
+signal-hunter skip  <num>       # hide from pipeline
+signal-hunter open  <num>       # open original URL in browser
+
+# Scheduler
+signal-hunter cron start                    # start background daemon (every 30m)
+signal-hunter cron start --interval 1h     # custom interval: 30m, 1h, 6h, 1d
+signal-hunter cron stop
+signal-hunter cron status
+signal-hunter cron logs
+signal-hunter cron install                  # print crontab / PM2 / systemd config
+
+# Maintenance
+signal-hunter update             # pull latest from GitHub
+signal-hunter version
 ```
 
 ---
 
 ## Configuration
 
-### Your Profile (`config/profile.yml`)
-
-The entire system is driven by your profile. Plain English — the AI reads it.
+### `config/profile.yml`
 
 ```yaml
+version: "1"
+
 identity:
   name: "Your Name"
   type: freelancer      # freelancer | agency | both
 
 services:
   what_you_do: "Discord bots, n8n automation, AI integrations"
-
-  # Describe the PAIN your clients have — not your skills
   buying_signals: >
-    People frustrated with broken Zapier workflows.
-    Communities needing Discord bots for moderation.
-    Startups wanting to add AI without months of dev work.
-
+    Plain English description of your clients' pain — not your skills.
+    The more specific, the better the signal quality.
   red_flags:
     - equity only
     - blockchain
     - unpaid test
+  budget_min: "$500"
 
 llm:
-  provider: gemini        # gemini | openai | claude | ollama
+  provider: gemini      # gemini | openai | claude | ollama
   model: gemini-flash-latest
-  min_score: 40           # only save signals scoring above this
+  min_score: 70         # 60 = decent, 70 = good, 80 = strong
 
 sources:
   enabled:
@@ -196,18 +342,17 @@ sources:
   reddit:
     subreddits:
       - forhire
-      - hiring
       - smallbusiness
       - webdev
 
 notifications:
-  discord_webhook: ""     # paste Discord webhook URL — no bot setup needed
-  notify_min_score: 65    # only notify for strong signals
+  discord_webhook: ""   # paste a Discord webhook URL — no bot setup needed
+  notify_min_score: 80  # only ping for strong signals
 ```
 
-### Partner Businesses (`config/businesses.yml`)
+### `config/businesses.yml` — multi-business routing
 
-Route signals to the right person across your team or friend network:
+Route signals to different people in your team or partner network:
 
 ```yaml
 businesses:
@@ -217,18 +362,18 @@ businesses:
       discord_webhook: "https://discord.com/api/webhooks/..."
     buying_signals:
       - people needing Discord bots
-      - automation and workflow help
+      - n8n and workflow automation
 
-  - id: alex-devops
+  - id: alex
     name: "Alex — DevOps"
     contact:
-      email: alex@example.com
+      discord_webhook: "https://discord.com/api/webhooks/..."
     buying_signals:
-      - deployment issues
-      - Kubernetes help
+      - deployment and CI/CD help
+      - Kubernetes and infrastructure
 ```
 
-Each person only gets notified about their signals. One shared agent, private routing.
+Each person only gets notified about signals relevant to them.
 
 ---
 
@@ -236,11 +381,11 @@ Each person only gets notified about their signals. One shared agent, private ro
 
 | Source | Auth | Cost | Notes |
 |--------|------|------|-------|
-| Reddit | None | Free | Public RSS via `old.reddit.com` — works from any IP |
-| Hacker News | None | Free | Job stories + Algolia search |
+| Reddit | None | Free | Public RSS — works from any IP, no rate limits |
+| Hacker News | None | Free | Monthly "Who is Hiring?" + Algolia keyword search |
 | Remote OK | None | Free | Open JSON API |
-| Twitter / X | Bearer token | Free tier | 500k tweets/month |
-| Custom URLs | None | Free | Any webpage via Jina.ai reader |
+| Twitter / X | Bearer token | Free tier | 500k tweet reads/month |
+| Custom URLs | None | Free | Any public webpage via Jina.ai reader |
 
 ---
 
@@ -248,18 +393,18 @@ Each person only gets notified about their signals. One shared agent, private ro
 
 | Provider | Model | Cost | Notes |
 |----------|-------|------|-------|
-| Google Gemini | `gemini-flash-latest` | Free tier | Best for getting started |
-| OpenAI | `gpt-4o-mini` | ~$0.01/1k signals | Fast |
-| Anthropic Claude | `claude-haiku-4-5-20251001` | ~$0.01/1k signals | Excellent reasoning |
-| Ollama | `llama3.2` | Free | Runs locally, 100% private |
+| Google Gemini | `gemini-flash-latest` | Free tier | Best to start — generous free quota |
+| OpenAI | `gpt-4o-mini` | ~$0.01/1k signals | Fast and reliable |
+| Anthropic Claude | `claude-haiku-4-5-20251001` | ~$0.01/1k signals | Best reasoning |
+| Ollama | `llama3.2` | Free | Runs locally — 100% private, no API key |
 
 ---
 
 ## MCP Server — use inside Claude Code / Cursor
 
-Signal Hunter exposes itself as an [MCP server](https://modelcontextprotocol.io), so your AI assistant can call it directly.
+Signal Hunter exposes itself as an [MCP server](https://modelcontextprotocol.io) so your AI assistant can scan and manage signals directly.
 
-**Claude Desktop** — add to `~/.claude/claude_desktop_config.json`:
+**Claude Desktop / Claude Code** — add to `~/.claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -271,7 +416,7 @@ Signal Hunter exposes itself as an [MCP server](https://modelcontextprotocol.io)
 }
 ```
 
-**Or with a local clone:**
+**Local clone:**
 
 ```json
 {
@@ -286,24 +431,7 @@ Signal Hunter exposes itself as an [MCP server](https://modelcontextprotocol.io)
 
 Available tools: `scan_signals`, `list_signals`, `get_signal`, `mark_signal`
 
-Now ask Claude: *"Scan for new leads and show me anything above 70"* — from inside your editor.
-
----
-
-## Automation (VPS / Server)
-
-```bash
-# Recommended: PM2 (auto-restart on crash)
-npm install -g pm2
-pm2 start src/daemon.js --name signal-hunter -- --interval 30m
-pm2 save && pm2 startup
-
-# Or: built-in daemon
-signal-hunter cron start --interval 30m
-
-# Or: crontab (most portable)
-signal-hunter cron install    # prints the exact line to add
-```
+Then ask Claude: *"Scan for new leads and show me anything above 75"*
 
 ---
 
@@ -311,36 +439,35 @@ signal-hunter cron install    # prints the exact line to add
 
 ```
 signal-hunter/
-├── bin/
-│   └── cli.js             ← CLI entry point + command dispatcher
+├── bin/cli.js             ← CLI entry point + command dispatcher
 ├── src/
 │   ├── commands/
-│   │   ├── scan.js        ← Main scanner
+│   │   ├── scan.js        ← Main scanner + runScan() export
 │   │   ├── list.js        ← Pipeline viewer
 │   │   ├── cron.js        ← Cron management (start/stop/status/logs)
 │   │   ├── manage.js      ← reply / skip / open
 │   │   ├── doctor.js      ← Health check
 │   │   ├── setup.js       ← Setup wizard
 │   │   └── update.js      ← Self-updater
-│   ├── daemon.js          ← Background scan daemon
-│   └── mcp-server.js      ← MCP server (Claude Code, Cursor, VS Code)
+│   ├── daemon.js          ← Background scan daemon (node-cron)
+│   └── mcp-server.js      ← MCP server
 ├── agents/
 │   ├── qualifier.js       ← AI scoring engine (multi-LLM)
 │   └── router.js          ← Multi-business notification routing
 ├── sources/
 │   ├── hackernews.js      ← HN job stories + Algolia search
-│   ├── reddit.js          ← Reddit RSS (no auth needed)
+│   ├── reddit.js          ← Reddit RSS (no auth)
 │   ├── remoteok.js        ← Remote OK open API
-│   ├── twitter.js         ← Twitter/X (requires bearer token)
+│   ├── twitter.js         ← Twitter/X bearer token
 │   └── custom.js          ← Any URL via Jina.ai
 ├── integrations/
-│   └── discord-webhook.js ← Discord webhook sender
+│   └── discord-webhook.js
 ├── utils/
 │   ├── args.js            ← CLI argument parser
 │   ├── config.js          ← YAML config loader
-│   ├── store.js           ← Signal pipeline (JSON store)
+│   ├── store.js           ← Signal pipeline (JSON)
 │   ├── paths.js           ← PKG_DIR / DATA_DIR resolver
-│   └── logger.js          ← Async file logger
+│   └── logger.js          ← File logger
 └── config/
     ├── profile.example.yml
     ├── businesses.example.yml
@@ -351,13 +478,7 @@ signal-hunter/
 
 ## Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-**Good first issues:**
-- Adding a new source (LinkedIn public search, Wellfound, Indie Hackers)
-- Adding a new LLM provider
-- Improving the pre-filter accuracy
-- Adding email digest integration
+See [CONTRIBUTING.md](CONTRIBUTING.md). Good first issues: new sources (Wellfound, Indie Hackers, Slack job boards), new LLM providers, email digest, improved pre-filter logic.
 
 ---
 
