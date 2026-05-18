@@ -109,7 +109,19 @@ if (profile?.sources?.enabled) {
     }
 }
 
-// 7. Optional: businesses.yml
+// 7. Discord webhook
+const discordWebhook = process.env.DISCORD_WEBHOOK_URL || profile?.notifications?.discord_webhook;
+if (discordWebhook) {
+    if (discordWebhook.startsWith('https://discord.com/api/webhooks/')) {
+        results.push(ok('Discord webhook configured'));
+    } else {
+        results.push(fail('Discord webhook URL looks invalid', 'Must start with https://discord.com/api/webhooks/'));
+    }
+} else {
+    results.push(warn('Discord webhook not set (optional)', 'Add DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/... to .env'));
+}
+
+// 8. businesses.yml (optional)
 if (existsSync(join(DATA_DIR, 'config/businesses.yml'))) {
     try {
         const biz = load(readFileSync(join(DATA_DIR, 'config/businesses.yml'), 'utf8'));
@@ -122,7 +134,7 @@ if (existsSync(join(DATA_DIR, 'config/businesses.yml'))) {
     results.push(warn('config/businesses.yml not found', 'Optional — copy config/businesses.example.yml to add partner businesses'));
 }
 
-// 8. Pipeline file
+// 9. Pipeline file
 if (existsSync(join(DATA_DIR, 'data/signals.md'))) {
     results.push(ok('data/signals.md — pipeline file exists'));
 } else {

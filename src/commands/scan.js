@@ -187,6 +187,17 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
 
     if (!quiet) {
         console.log('');
+
+        // Explain why Discord didn't fire — avoids silent confusion
+        if (!dryRun && saved > 0 && notified === 0) {
+            const hasWebhook = !!(process.env.DISCORD_WEBHOOK_URL || profile.notifications?.discord_webhook);
+            if (!hasWebhook) {
+                p.log.warn(`Discord not configured — add ${pc.cyan('DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...')} to .env`);
+            } else {
+                p.log.warn(`Signal score below notify threshold (${notifyMinScore}) — lower ${pc.cyan('notify_min_score')} in config/profile.yml to get pinged`);
+            }
+        }
+
         const summary = dryRun
             ? pc.yellow(`DRY RUN — ${preFiltered.length} would be qualified, nothing saved`)
             : [

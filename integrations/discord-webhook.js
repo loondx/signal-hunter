@@ -1,7 +1,6 @@
-// Sends a signal notification to a Discord webhook.
-// No bot token needed — just a webhook URL (created in any Discord channel in 30 seconds).
+import { logger } from '../utils/logger.js';
 
-const SCORE_COLORS = { high: 0x00C853, mid: 0xFF9800, low: 0xEF5350 };
+const SCORE_COLORS  = { high: 0x00C853, mid: 0xFF9800, low: 0xEF5350 };
 const URGENCY_ICONS = { urgent: '🔥', normal: '📌', low: '·' };
 
 export async function notifyDiscord(signal, webhookUrl) {
@@ -53,8 +52,13 @@ export async function notifyDiscord(signal, webhookUrl) {
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ embeds: [embed] }),
         });
+        if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            logger.error(`Discord webhook HTTP ${res.status}: ${body.slice(0, 200)}`);
+        }
         return res.ok;
-    } catch {
+    } catch (err) {
+        logger.error(`Discord webhook failed: ${err.message}`);
         return false;
     }
 }
