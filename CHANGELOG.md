@@ -7,6 +7,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [Unreleased]
+
+### Changed
+- Moved all root-level command scripts into `src/commands/` (`scan`, `list`, `cron`, `manage`, `doctor`, `setup`, `update`) and `src/` (`daemon.js`, `mcp-server.js`) — eliminates the flat-root clutter
+- Dropped `.mjs` extension throughout; `.js` is correct since `package.json` declares `"type": "module"`
+- Extracted the triply-duplicated `argValue` helper into `utils/args.js`
+- Updated `bin/cli.js` dispatch paths, `package.json` scripts/bin/files, and all internal `spawn` calls to match the new layout
+- Updated README project structure tree, PM2 command, MCP local-clone path, and `npm run setup` comment
+
+---
+
 ## [0.1.0] — 2026-05-19
 
 ### First public release
@@ -43,4 +54,5 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+[Unreleased]: https://github.com/loondx/signal-hunter/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/loondx/signal-hunter/releases/tag/v0.1.0
