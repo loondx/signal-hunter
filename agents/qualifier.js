@@ -15,21 +15,29 @@ export function preFilter(signal, profile) {
     // 2. Very short posts — not enough context to keyword-filter reliably
     if (text.split(/\s+/).length < 15) return { pass: true };
 
-    // 3. Keyword overlap with profile services
+    // 3. Keyword overlap — profile keywords + universal buying-intent words
     const keywordSource = [
         profile.services?.what_you_do || '',
         profile.services?.buying_signals || '',
     ].join(' ');
 
-    const keywords = keywordSource
+    const profileKeywords = keywordSource
         .toLowerCase()
         .split(/[\s,.\n!?;:]+/)
         .filter(w => w.length > 4)
         .slice(0, 40);
 
-    if (keywords.length === 0) return { pass: true };
+    // Universal buying-intent signals that apply to any service business
+    const intentKeywords = [
+        'hire', 'hiring', 'looking for', 'need help', 'need a', 'need someone',
+        'budget', 'contractor', 'freelancer', 'freelance', 'developer', 'agency',
+        'build', 'integrate', 'automate', 'connect', 'implement', 'setup', 'create',
+        'help me', 'how do i', 'anyone know', 'recommendation', 'suggest',
+        'urgent', 'asap', 'project', 'payment', 'rate', 'quote', 'proposal',
+    ];
 
-    if (!keywords.some(kw => text.includes(kw))) {
+    const allKeywords = [...profileKeywords, ...intentKeywords];
+    if (!allKeywords.some(kw => text.includes(kw))) {
         return { pass: false, reason: 'no keyword overlap with profile' };
     }
 
@@ -66,11 +74,16 @@ ${signal.text}
 """
 
 Score 0-100:
-90-100 → urgent buying intent, clear fit, respond today
-70-89  → strong signal, good fit, respond soon
-50-69  → moderate fit, worth a look
-30-49  → weak or unclear signal
-0-29   → not relevant or red flag
+90-100 → someone actively looking to hire a freelancer/contractor, clear fit, respond today
+70-89  → strong buying intent, good fit, respond soon
+50-69  → moderate fit, worth investigating
+30-49  → weak or unclear signal, low priority
+0-29   → full-time employment ad, large company, or no relevance at all
+
+IMPORTANT — is_red_flag rules (strict):
+- Set is_red_flag TRUE only if the content EXPLICITLY contains one of these terms: ${(profile.services.red_flags || []).join(', ')}
+- Set is_red_flag FALSE for everything else, even if the score is 0
+- Full-time job ads are NOT red flags — just score them 0-20
 
 Return ONLY valid JSON — no markdown, no extra text:
 {

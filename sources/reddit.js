@@ -1,67 +1,118 @@
-// Reddit source — supports both unauthenticated (dev/personal use) and
-// authenticated (REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET) modes.
-//
-// Reddit blocks unauthenticated API calls from server IPs.
-// If you're running on a VPS and getting 403/500 errors, set up OAuth:
-//   1. Go to https://www.reddit.com/prefs/apps
-//   2. Create a "script" app
-//   3. Add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET to .env
+// Reddit source — uses public RSS/Atom feeds, no auth required.
+// RSS works from any IP including servers, unlike the JSON API which blocks non-browser requests.
+// Feed URL: https://www.reddit.com/r/{sub}/new.rss?limit=25
 
-const UA    = 'signal-hunter/0.1.0 (open source lead tool; github.com/yourusername/signal-hunter)';
+// old.reddit.com RSS works from any IP without auth.
+// www.reddit.com blocks bot User-Agents; old.reddit.com is lenient.
+const UA    = 'Mozilla/5.0 (compatible; signal-hunter/0.1.0; +https://github.com/yourusername/signal-hunter)';
 const SLEEP = (ms) => new Promise(r => setTimeout(r, ms));
 
-let _accessToken = null;
-let _tokenExpiry = 0;
+// ── Minimal Atom XML parser — no dependencies ─────────────────────────────────
 
-async function getAccessToken() {
-    if (_accessToken && Date.now() < _tokenExpiry) return _accessToken;
-
-    const clientId     = process.env.REDDIT_CLIENT_ID;
-    const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-    if (!clientId || !clientSecret) return null;
-
-    const creds = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const res   = await fetch('https://www.reddit.com/api/v1/access_token', {
-        method:  'POST',
-        headers: { Authorization: `Basic ${creds}`, 'User-Agent': UA, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body:    'grant_type=client_credentials',
-    });
-    if (!res.ok) return null;
-
-    const json    = await res.json();
-    _accessToken  = json.access_token;
-    _tokenExpiry  = Date.now() + (json.expires_in - 60) * 1000;
-    return _accessToken;
+function extractTag(xml, tag) {
+    const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'i');
+    return (re.exec(xml) || [])[1]?.trim() ?? '';
 }
 
-async function fetchSubreddit(sub, limit) {
-    const token = await getAccessToken();
-    const base  = token ? 'https://oauth.reddit.com' : 'https://www.reddit.com';
-    const headers = {
-        'User-Agent': UA,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+function decodeEntities(str) {
+    return str
+        .replace(/&lt;/g,   '<')
+        .replace(/&gt;/g,   '>')
+        .replace(/&amp;/g,  '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g,  "'")
+        .replace(/&apos;/g, "'")
+        .replace(/&#x200B;/g, '');
+}
 
-    const ctrl  = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 12_000);
+function stripHtml(html) {
+    return decodeEntities(html)
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
-    try {
-        const res = await fetch(`${base}/r/${sub}/new.json?limit=${limit}`, { headers, signal: ctrl.signal });
-        clearTimeout(timer);
+function parseAtomFeed(xml, sub) {
+    const entries = [];
+    const entryRe = /<entry>([\s\S]*?)<\/entry>/g;
+    let m;
 
-        if (res.status === 429) return { status: 'rate_limited', posts: [] };
-        if (res.status === 403) return { status: 'forbidden',    posts: [] };
-        if (res.status >= 500) return { status: `server_error_${res.status}`, posts: [] };
-        if (!res.ok)           return { status: `error_${res.status}`, posts: [] };
+    while ((m = entryRe.exec(xml)) !== null) {
+        const block = m[1];
 
-        const json = await res.json();
-        return { status: 'ok', posts: json.data?.children || [] };
-    } catch (err) {
-        clearTimeout(timer);
-        if (err.name === 'AbortError') return { status: 'timeout', posts: [] };
-        return { status: 'network_error', posts: [] };
+        // Reddit RSS id is "t3_POSTID" format, not a URL
+        const rawId   = extractTag(block, 'id');
+        const idMatch = rawId.match(/t3_([a-z0-9]+)/i);
+        if (!idMatch) continue; // skip non-post entries (subreddit-level metadata)
+
+        const postId  = idMatch[1];
+        const title   = stripHtml(extractTag(block, 'title'));
+        const content = stripHtml(extractTag(block, 'content'));
+
+        // Author is nested: <author><name>/u/username</name></author>
+        const authorBlock = /<author>([\s\S]*?)<\/author>/i.exec(block);
+        const author = authorBlock
+            ? stripHtml(extractTag(authorBlock[1], 'name')).replace(/^\/u\//i, '')
+            : 'unknown';
+
+        const published = extractTag(block, 'published') || extractTag(block, 'updated');
+        const linkMatch = /<link[^>]+href="([^"]+)"/i.exec(block);
+        const url       = linkMatch ? linkMatch[1] : `https://www.reddit.com/r/${sub}/comments/${postId}/`;
+
+        const text = `${title}\n\n${content}`.trim();
+        if (text.length < 40) continue;
+
+        entries.push({
+            id:        `reddit_${postId}`,
+            source:    `Reddit r/${sub}`,
+            text:      text.substring(0, 1500),
+            url,
+            author,
+            posted_at: published,
+        });
     }
+
+    return entries;
 }
+
+// ── Fetch single subreddit via RSS ────────────────────────────────────────────
+
+async function fetchSubredditRSS(sub, limit, retries = 1) {
+    const url = `https://old.reddit.com/r/${sub}/new.rss?limit=${limit}`;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        if (attempt > 0) await SLEEP(3000); // wait before retry
+
+        const ctrl  = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 12_000);
+
+        try {
+            const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: ctrl.signal });
+            clearTimeout(timer);
+
+            if (res.status === 429) return { status: 'rate_limited', entries: [] };
+            if (res.status === 403) return { status: 'forbidden',    entries: [] };
+            if (res.status >= 500 && attempt < retries) continue; // retry on server errors
+            if (res.status >= 400) return { status: `http_${res.status}`, entries: [] };
+
+            const xml = await res.text();
+            if (!xml.includes('<feed') && !xml.includes('<rss')) {
+                return { status: 'invalid_feed', entries: [] };
+            }
+
+            return { status: 'ok', entries: parseAtomFeed(xml, sub) };
+        } catch (err) {
+            clearTimeout(timer);
+            if (err.name === 'AbortError') return { status: 'timeout', entries: [] };
+            if (attempt < retries) continue;
+            return { status: 'network_error', entries: [] };
+        }
+    }
+
+    return { status: 'failed_after_retry', entries: [] };
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
 
 export async function fetchReddit(profile, sourcesConfig) {
     const subreddits =
@@ -69,23 +120,18 @@ export async function fetchReddit(profile, sourcesConfig) {
         profile.sources?.reddit?.subreddits ||
         ['forhire', 'freelance', 'webdev'];
 
-    const limit   = sourcesConfig?.reddit?.posts_per_scan || 10;
+    const limit   = Math.min(sourcesConfig?.reddit?.posts_per_scan || 25, 100);
     const results = [];
     const errors  = [];
 
     for (const sub of subreddits) {
-        await SLEEP(2000); // respectful 2-second delay between subreddits
+        await SLEEP(1500); // respectful delay between subreddits
 
-        const { status, posts } = await fetchSubreddit(sub, limit);
+        const { status, entries } = await fetchSubredditRSS(sub, limit);
 
         if (status === 'rate_limited') {
-            console.warn(`\n  Reddit rate limit (r/${sub}) — pausing this cycle`);
+            console.warn(`\n  Reddit rate limit — skipping remaining subreddits this cycle`);
             break;
-        }
-
-        if (status === 'forbidden') {
-            errors.push(`r/${sub}: 403 Forbidden — set REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET in .env for authenticated access`);
-            continue;
         }
 
         if (status !== 'ok') {
@@ -93,30 +139,11 @@ export async function fetchReddit(profile, sourcesConfig) {
             continue;
         }
 
-        for (const post of posts) {
-            const d = post.data;
-            if (!d.selftext || d.over_18) continue;
-            if (d.selftext === '[deleted]' || d.selftext === '[removed]') continue;
-            if (d.selftext.length < 40) continue;
-
-            results.push({
-                id:        `reddit_${d.id}`,
-                source:    `Reddit r/${sub}`,
-                text:      `${d.title}\n\n${d.selftext}`.substring(0, 1500),
-                url:       `https://www.reddit.com${d.permalink}`,
-                author:    `u/${d.author}`,
-                posted_at: new Date(d.created_utc * 1000).toISOString(),
-            });
-        }
+        results.push(...entries);
     }
 
     if (errors.length > 0) {
-        console.warn(`\n  Reddit issues:\n${errors.map(e => `    • ${e}`).join('\n')}`);
-        if (errors.some(e => e.includes('403'))) {
-            console.warn(`\n  Tip: Reddit blocks unauthenticated server requests.`);
-            console.warn(`  Add REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET to .env for reliable access.`);
-            console.warn(`  Setup: https://www.reddit.com/prefs/apps → "script" app type\n`);
-        }
+        console.warn(`\n  Reddit RSS issues: ${errors.join(', ')}`);
     }
 
     return results;

@@ -86,7 +86,27 @@ for (const dir of ['data', 'logs', 'config']) {
     }
 }
 
-// 6. Optional: businesses.yml
+// 6. Source-specific credential checks
+if (profile?.sources?.enabled) {
+    const enabled = profile.sources.enabled;
+
+    if (enabled.includes('reddit')) {
+        results.push(ok('Reddit — uses public RSS feeds (no credentials needed)'));
+    }
+
+    if (enabled.includes('twitter')) {
+        if (process.env.TWITTER_BEARER_TOKEN) {
+            results.push(ok('Twitter — TWITTER_BEARER_TOKEN is set'));
+        } else {
+            results.push(warn(
+                'Twitter — TWITTER_BEARER_TOKEN not set (source will be skipped)',
+                'Fix: developer.x.com → Create App → Keys & Tokens → Bearer Token → add to .env\nOR remove "twitter" from sources.enabled in config/profile.yml'
+            ));
+        }
+    }
+}
+
+// 7. Optional: businesses.yml
 if (existsSync('./config/businesses.yml')) {
     try {
         const biz = load(readFileSync('./config/businesses.yml', 'utf8'));

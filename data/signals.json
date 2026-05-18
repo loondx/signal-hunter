@@ -36,5 +36,23 @@
     "status": "skipped",
     "saved_at": "2026-05-18T17:44:22.211Z",
     "updated_at": "2026-05-18T17:44:34.287Z"
+  },
+  {
+    "num": 3,
+    "id": "reddit_1tgvu0f",
+    "source": "Reddit r/webdev",
+    "text": "How to create a form to capture customer feedback and capture the information in a custom order which is linked to work order\n\nNeed help &#32; submitted by &#32; /u/Idiotic_spell [link] &#32; [comments]",
+    "url": "https://old.reddit.com/r/webdev/comments/1tgvu0f/how_to_create_a_form_to_capture_customer_feedback/",
+    "author": "Idiotic_spell",
+    "posted_at": "2026-05-18T18:20:50+00:00",
+    "score": 45,
+    "is_red_flag": false,
+    "business_match": null,
+    "reasoning": "Person asking a general how-to question about form building and data capture, not actively seeking to hire a contractor; unclear if they want to build this themselves or need external help.",
+    "budget_hint": null,
+    "urgency": "low",
+    "outreach_angle": "They're thinking about capturing customer feedback and linking it to work orders—this could involve n8n automation or custom integrations if they have multiple tools. Could comment offering to help them think through the automation angle rather than just form building, but low intent signal overall.",
+    "status": "new",
+    "saved_at": "2026-05-18T18:29:06.291Z"
   }
 ]

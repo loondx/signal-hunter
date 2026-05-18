@@ -35,7 +35,7 @@ const SOURCE_FETCHERS = {
 };
 
 // ── Core scan logic (exported for cron daemon + MCP server) ──────────────────
-export async function runScan({ dryRun = false, sourceFilter = null, quiet = false } = {}) {
+export async function runScan({ dryRun = false, sourceFilter = null, quiet = false, minScoreOverride = null } = {}) {
     if (!quiet) {
         console.log('');
         p.intro(
@@ -77,6 +77,12 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
         const fetcher = SOURCE_FETCHERS[name];
         if (!fetcher) { !quiet && p.log.warn(`Unknown source "${name}" — skipping`); continue; }
 
+        // Pre-flight checks — warn early instead of silently returning 0
+        if (name === 'twitter' && !process.env.TWITTER_BEARER_TOKEN) {
+            !quiet && p.log.warn(`Twitter skipped — TWITTER_BEARER_TOKEN not set in .env`);
+            !quiet && p.log.warn(`  Get one free at developer.x.com → Create App → Keys & Tokens`);
+            continue;
+        }
         const s = quiet ? { start: () => {}, stop: () => {} } : p.spinner();
         s.start(`Fetching ${name}...`);
         try {
@@ -118,12 +124,29 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
     }
 
     // ── AI qualification ───────────────────────────────────────────────────
-    const minScore       = profile.llm?.min_score ?? 60;
+    const minScore       = minScoreOverride ?? profile.llm?.min_score ?? 60;
     const notifyMinScore = profile.notifications?.notify_min_score ?? 70;
 
-    // Cap AI calls to stay within free tier (Gemini: 15 RPM, ~1500/day)
-    const maxCandidates = sourcesConfig?.max_candidates_per_scan ?? 10;
-    const toQualify     = preFiltered.slice(0, maxCandidates);
+    // Interleave candidates by source so each source gets a fair share of the cap.
+    // Without this, the first source would consume the entire quota every run.
+    const bySource = new Map();
+    for (const c of preFiltered) {
+        const key = c.source;
+        if (!bySource.has(key)) bySource.set(key, []);
+        bySource.get(key).push(c);
+    }
+    const interleaved = [];
+    const queues = [...bySource.values()];
+    let i = 0;
+    while (interleaved.length < preFiltered.length) {
+        const q = queues[i % queues.length];
+        if (q.length) interleaved.push(q.shift());
+        i++;
+        if (queues.every(q => q.length === 0)) break;
+    }
+
+    const maxCandidates = sourcesConfig?.max_candidates_per_scan ?? 15;
+    const toQualify     = interleaved.slice(0, maxCandidates);
     if (!quiet && preFiltered.length > maxCandidates) {
         p.log.warn(`Capping at ${maxCandidates} AI calls this run (${preFiltered.length} candidates). Adjust max_candidates_per_scan in config/sources.yml to change.`);
     }
@@ -191,10 +214,11 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
 // ── Run when called directly ──────────────────────────────────────────────────
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMain) {
-    const args     = process.argv.slice(2);
-    const dryRun   = args.includes('--dry-run');
-    const source   = argValue(args, '--source');
-    runScan({ dryRun, sourceFilter: source }).catch(err => {
+    const args      = process.argv.slice(2);
+    const dryRun    = args.includes('--dry-run');
+    const source    = argValue(args, '--source');
+    const minScore  = argValue(args, '--min-score');
+    runScan({ dryRun, sourceFilter: source, minScoreOverride: minScore ? parseInt(minScore, 10) : null }).catch(err => {
         logger.error(`Fatal: ${err.message}`);
         console.error(pc.red(`\nFatal error: ${err.message}\n`));
         process.exit(1);
