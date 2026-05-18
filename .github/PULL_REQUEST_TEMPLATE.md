@@ -13,10 +13,8 @@
 
 ## Testing
 
-<!-- How did you test this? -->
-
-- [ ] `npm run doctor` passes
-- [ ] `npm run scan --dry-run` runs without errors
+- [ ] `node bin/cli.js doctor` passes
+- [ ] `node bin/cli.js scan --dry-run` runs without errors
 - [ ] Tested on Node.js 20+
 
 ## Checklist
@@ -25,4 +23,4 @@
 - [ ] No `config/profile.yml` changes (that's a user file)
 - [ ] `config/*.example.yml` updated if new config options added
 - [ ] README updated if new command or source added
-- [ ] CHANGELOG entry added under `[Unreleased]`
+- [ ] CHANGELOG updated if user-facing change

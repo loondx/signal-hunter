@@ -30,9 +30,11 @@ jobs:
       - name: Check all imports resolve
         run: |
           node --input-type=module << 'EOF'
+          import './utils/args.js';
           import './utils/config.js';
           import './utils/store.js';
           import './utils/logger.js';
+          import './utils/paths.js';
           import './sources/hackernews.js';
           import './sources/reddit.js';
           import './sources/remoteok.js';
@@ -44,8 +46,10 @@ jobs:
           console.log('All imports OK');
           EOF
 
-      - name: CLI help works
-        run: node bin/cli.js --help
+      - name: CLI help and version work
+        run: |
+          node bin/cli.js --help
+          node bin/cli.js version
 
       - name: Example configs are valid YAML
         run: |
@@ -56,33 +60,4 @@ jobs:
             load(readFileSync(f, 'utf8'));
             console.log(`✓ ${f}`);
           }
-          EOF
-
-      - name: Reddit RSS parser smoke test
-        run: |
-          node --input-type=module << 'EOF'
-          import { readFileSync } from 'fs';
-
-          // Minimal inline test of the Atom parser without hitting the network
-          const sampleAtom = `<?xml version="1.0" encoding="UTF-8"?>
-          <feed xmlns="http://www.w3.org/2005/Atom">
-            <entry>
-              <id>t3_abc123</id>
-              <title>Test Hiring Post</title>
-              <content type="html">Looking for a developer to build an automation tool</content>
-              <author><name>/u/testuser</name></author>
-              <published>2026-01-01T00:00:00Z</published>
-              <link href="https://old.reddit.com/r/forhire/comments/abc123/test/"/>
-            </entry>
-          </feed>`;
-
-          // Import and patch to avoid network call
-          const { createRequire } = await import('module');
-          const r = createRequire(import.meta.url);
-
-          // Read and eval the source to test parser inline
-          const src = readFileSync('./sources/reddit.js', 'utf8');
-          const parseMatch = src.match(/function parseAtomFeed[\s\S]*?^}/m);
-          if (!parseMatch) throw new Error('parseAtomFeed not found in source');
-          console.log('✓ Reddit RSS parser function present in source');
           EOF

@@ -10,7 +10,7 @@ cd signal-hunter
 npm install
 cp config/profile.example.yml config/profile.yml   # edit with your details
 cp .env.example .env                                # add your LLM API key
-node doctor.mjs                                     # verify setup
+node bin/cli.js doctor                              # verify setup
 ```
 
 ## Ways to contribute
@@ -23,14 +23,14 @@ node doctor.mjs                                     # verify setup
 | Add a new LLM provider | Node.js | Add a `callXxx()` function in `agents/qualifier.js` |
 | Improve pre-filter accuracy | Logic | `agents/qualifier.js` — `preFilter()` |
 | Email digest integration | Node.js + nodemailer | `integrations/email.js` |
-| Better CLI output | picocolors | `list.mjs`, `scan.mjs` |
+| Better CLI output | picocolors | `src/commands/list.js`, `src/commands/scan.js` |
 
 ### Adding a new source
 
 1. Create `sources/yoursource.js` — export `fetchYourSource(profile, sourcesConfig)`
 2. Each result must have: `{ id, source, text, url, author, posted_at }`
 3. `id` must be unique and stable (same post = same id across runs)
-4. Register in `scan.mjs` → `SOURCE_FETCHERS` map
+4. Register in `src/commands/scan.js` → `SOURCE_FETCHERS` map
 5. Add to `config/sources.example.yml`
 6. Add to `config/profile.example.yml` under `sources.enabled`
 
@@ -38,21 +38,21 @@ node doctor.mjs                                     # verify setup
 
 1. Add a `callYourProvider(prompt, model)` function in `agents/qualifier.js`
 2. Add it to the `switch` in `qualify()`
-3. Add to the `LLM_MODELS` map in `setup.mjs`
+3. Add to the `LLM_MODELS` map in `src/commands/setup.js`
 4. Document in README LLMs table
 
 ## Pull Request process
 
 1. Fork the repo and create a feature branch: `git checkout -b feat/your-feature`
 2. Make your changes
-3. Test manually: `npm run doctor`, `npm run scan --dry-run`
+3. Test manually: `node bin/cli.js doctor`, `node bin/cli.js scan --dry-run`
 4. Commit with a clear message: `feat: add LinkedIn source`
 5. Open a PR against `main`
 
 ## Code style
 
 - ES Modules (`import/export`) — no CommonJS
-- No TypeScript — plain `.mjs` / `.js`
+- No TypeScript — plain `.js` with `"type": "module"` in `package.json`
 - No `console.log` in library code — use `logger.info/warn/error` from `utils/logger.js`
 - Prefer `picocolors` over `chalk` for terminal colour
 - Keep dependencies minimal — check if Node built-ins can do the job first

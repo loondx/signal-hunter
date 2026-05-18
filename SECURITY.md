@@ -29,6 +29,6 @@ Out of scope:
 ## API Keys
 
 Signal Hunter stores API keys in a local `.env` file. This file is:
-- Listed in `.gitignore` — never committed
-- Listed in `.npmignore` — never published
+- Listed in `.gitignore` — never committed to git
+- Not included in `package.json` `files` — never published to npm
 - Read only at runtime — never transmitted to any service except your chosen LLM provider

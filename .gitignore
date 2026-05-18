@@ -1,3 +1,4 @@
+# Dependencies
 node_modules/
 
 # User config — never commit real config, only examples
@@ -8,7 +9,7 @@ config/sources.yml
 # API keys
 .env
 
-# Signal pipeline and scan state — this is YOUR private data
+# Signal pipeline and scan state — private user data
 data/signals.json
 data/seen-ids.json
 data/signals.md
@@ -17,8 +18,18 @@ data/cron.pid
 
 # Logs
 logs/
+*.log
+
+# Test output
+coverage/
+.nyc_output/
 
 # OS
 .DS_Store
 Thumbs.db
-*.log
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
