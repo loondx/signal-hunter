@@ -4,7 +4,7 @@
 
 // old.reddit.com RSS works from any IP without auth.
 // www.reddit.com blocks bot User-Agents; old.reddit.com is lenient.
-const UA    = 'Mozilla/5.0 (compatible; signal-hunter/0.1.0; +https://github.com/yourusername/signal-hunter)';
+const UA    = 'Mozilla/5.0 (compatible; signal-hunter/0.1.0; +https://github.com/loondx/signal-hunter)';
 const SLEEP = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ── Minimal Atom XML parser — no dependencies ─────────────────────────────────

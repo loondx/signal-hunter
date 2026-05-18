@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/signal-hunter?color=brightgreen)](https://www.npmjs.com/package/signal-hunter)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/yourusername/signal-hunter/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/signal-hunter/actions)
+[![CI](https://github.com/loondx/signal-hunter/actions/workflows/ci.yml/badge.svg)](https://github.com/loondx/signal-hunter/actions)
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-purple)](https://modelcontextprotocol.io)
 
 </div>
@@ -60,7 +60,7 @@ I was manually scanning Reddit, Hacker News, and job boards every morning lookin
 
 ```bash
 # 1. Clone
-git clone https://github.com/yourusername/signal-hunter
+git clone https://github.com/loondx/signal-hunter
 cd signal-hunter
 
 # 2. Install
@@ -113,7 +113,7 @@ signal-hunter setup
 ### Clone and run locally
 
 ```bash
-git clone https://github.com/yourusername/signal-hunter
+git clone https://github.com/loondx/signal-hunter
 cd signal-hunter
 npm install
 npm run setup      # or: node setup.mjs

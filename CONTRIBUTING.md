@@ -5,7 +5,7 @@ Thanks for taking the time to contribute! This document covers everything you ne
 ## Quick start for contributors
 
 ```bash
-git clone https://github.com/yourusername/signal-hunter
+git clone https://github.com/loondx/signal-hunter
 cd signal-hunter
 npm install
 cp config/profile.example.yml config/profile.yml   # edit with your details

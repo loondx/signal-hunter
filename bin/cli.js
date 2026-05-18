@@ -56,7 +56,7 @@ const HELP = `
     ${pc.cyan('--status')} ${pc.dim('<s>')}         Filter by status ${pc.dim('(new|replied|skipped)')}
     ${pc.cyan('--limit')} ${pc.dim('<n>')}          Max results to show
 
-  ${pc.dim('Docs → https://github.com/yourusername/signal-hunter')}
+  ${pc.dim('Docs → https://github.com/loondx/signal-hunter')}
   ${pc.dim('MCP  → see mcp-server.mjs for Claude Code / Cursor integration')}
 `;
 

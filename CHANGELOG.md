@@ -43,4 +43,4 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
-[0.1.0]: https://github.com/yourusername/signal-hunter/releases/tag/v0.1.0
+[0.1.0]: https://github.com/loondx/signal-hunter/releases/tag/v0.1.0

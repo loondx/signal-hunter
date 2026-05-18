@@ -1,6 +1,6 @@
 const ALGOLIA   = 'https://hn.algolia.com/api/v1';
 const FIREBASE  = 'https://hacker-news.firebaseio.com/v0';
-const UA        = 'signal-hunter/0.1.0 (open source; github.com/yourusername/signal-hunter)';
+const UA        = 'signal-hunter/0.1.0 (open source; github.com/loondx/signal-hunter)';
 const WEEK_AGO  = () => Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
 
 async function safeFetch(url, ms = 10_000) {
