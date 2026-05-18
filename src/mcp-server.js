@@ -56,7 +56,7 @@ const SOURCE_FETCHERS = {
 
 // ── MCP server setup ──────────────────────────────────────────────────────────
 const server = new Server(
-    { name: 'signal-hunter', version: '0.1.0' },
+    { name: 'signal-hunter', version: '0.1.1' },
     { capabilities: { tools: {} } }
 );
 

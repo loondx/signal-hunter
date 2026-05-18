@@ -7,6 +7,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.1.1] — 2026-05-19
+
+### Changed
+- Restructured project layout: command scripts moved into `src/commands/`, daemon and MCP server into `src/`
+
+---
+
 ## [0.1.0] — 2026-05-19
 
 ### First public release
@@ -43,4 +50,5 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+[0.1.1]: https://github.com/loondx/signal-hunter/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/loondx/signal-hunter/releases/tag/v0.1.0
