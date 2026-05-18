@@ -3,10 +3,10 @@ import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs';
 import { load } from 'js-yaml';
 import { join } from 'path';
-import { DATA_DIR } from './utils/paths.js';
+import { DATA_DIR } from '../../utils/paths.js';
 import pc from 'picocolors';
 
-// ── Load .env before checking env vars ───────────────────────────────────────
+// Load .env before checking env vars
 if (existsSync(join(DATA_DIR, '.env'))) {
     for (const line of readFileSync(join(DATA_DIR, '.env'), 'utf8').split('\n')) {
         const [key, ...rest] = line.split('=');
@@ -16,12 +16,10 @@ if (existsSync(join(DATA_DIR, '.env'))) {
     }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const ok   = (msg)       => ({ pass: true,  msg });
 const fail = (msg, hint) => ({ pass: false, msg, hint });
 const warn = (msg, hint) => ({ pass: null,  msg, hint });
 
-// ── Run checks ────────────────────────────────────────────────────────────────
 console.log('');
 p.intro(pc.bgYellow(pc.black('  Signal Hunter — Health Check  ')));
 
@@ -84,10 +82,10 @@ if (profile?.llm) {
 
 // 5. Required dirs
 for (const dir of ['data', 'logs', 'config']) {
-    if (existsSync(`./${dir}`)) {
+    if (existsSync(join(DATA_DIR, dir))) {
         results.push(ok(`${dir}/ directory exists`));
     } else {
-        results.push(fail(`${dir}/ directory missing`, `Run: mkdir ${dir}`));
+        results.push(fail(`${dir}/ directory missing`, `Run: mkdir -p ${join(DATA_DIR, dir)}`));
     }
 }
 
@@ -124,7 +122,7 @@ if (existsSync(join(DATA_DIR, 'config/businesses.yml'))) {
     results.push(warn('config/businesses.yml not found', 'Optional — copy config/businesses.example.yml to add partner businesses'));
 }
 
-// 7. Pipeline file
+// 8. Pipeline file
 if (existsSync(join(DATA_DIR, 'data/signals.md'))) {
     results.push(ok('data/signals.md — pipeline file exists'));
 } else {

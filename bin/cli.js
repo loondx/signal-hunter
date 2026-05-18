@@ -6,15 +6,15 @@ import pc               from 'picocolors';
 import { PKG_DIR, DATA_DIR } from '../utils/paths.js';
 
 const COMMANDS = {
-    setup:    'setup.mjs',
-    doctor:   'doctor.mjs',
-    scan:     'scan.mjs',
-    list:     'list.mjs',
-    cron:     'cron.mjs',
-    reply:    'manage.mjs',
-    skip:     'manage.mjs',
-    open:     'manage.mjs',
-    update:   'update.mjs',
+    setup:    'src/commands/setup.js',
+    doctor:   'src/commands/doctor.js',
+    scan:     'src/commands/scan.js',
+    list:     'src/commands/list.js',
+    cron:     'src/commands/cron.js',
+    reply:    'src/commands/manage.js',
+    skip:     'src/commands/manage.js',
+    open:     'src/commands/manage.js',
+    update:   'src/commands/update.js',
 };
 
 // These commands run even without a profile.yml

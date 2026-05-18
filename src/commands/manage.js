@@ -2,13 +2,13 @@
 // signal-hunter reply <num>  — show outreach angle, mark as replied
 // signal-hunter skip  <num>  — mark as skipped
 // signal-hunter open  <num>  — open signal URL in browser
-import pc                        from 'picocolors';
-import { execSync }              from 'child_process';
-import { loadEnv }               from './utils/config.js';
-import { loadSignals }           from './utils/store.js';
-import { writeFileSync }         from 'fs';
-import { join }                  from 'path';
-import { DATA_DIR }              from './utils/paths.js';
+import pc               from 'picocolors';
+import { execSync }     from 'child_process';
+import { writeFileSync } from 'fs';
+import { join }         from 'path';
+import { loadEnv }      from '../../utils/config.js';
+import { loadSignals }  from '../../utils/store.js';
+import { DATA_DIR }     from '../../utils/paths.js';
 
 loadEnv();
 
@@ -33,7 +33,6 @@ function boxed(label, value, color = pc.white) {
     console.log(`  ${pc.dim('─'.repeat(60))}`);
     const lines = String(value).split('\n');
     for (const line of lines) {
-        // word-wrap at ~70 chars
         const words = line.split(' ');
         let current = '';
         for (const word of words) {
@@ -68,7 +67,6 @@ function cmdReply(num) {
         console.log(`\n  ${pc.bold(pc.cyan('✉  Suggested Outreach Opener'))}`);
         console.log(`  ${pc.dim('─'.repeat(60))}`);
         console.log('');
-        // Print the outreach angle prominently
         const lines = s.outreach_angle.split(/(?<=[.!?])\s+/);
         for (const line of lines) {
             console.log(`  ${pc.white(line.trim())}`);
@@ -80,7 +78,6 @@ function cmdReply(num) {
     console.log(`\n  ${pc.bold('URL:')} ${pc.blue(s.url)}`);
     console.log('');
 
-    // Mark as replied
     const updated = updateSignalStatus(num, 'replied');
     if (updated) {
         console.log(`  ${pc.green('✓')}  Signal #${num} marked as ${pc.green('replied')}`);

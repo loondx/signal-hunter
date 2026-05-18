@@ -2,39 +2,30 @@
 import * as p   from '@clack/prompts';
 import pc        from 'picocolors';
 import { fileURLToPath } from 'url';
-import { loadEnv, loadProfile, loadBusinesses, loadSourcesConfig } from './utils/config.js';
-import { loadSeenIds, saveSeenIds, appendSignal }                   from './utils/store.js';
-import { preFilter, qualify }                                        from './agents/qualifier.js';
-import { resolveNotification }                                       from './agents/router.js';
-import { notifyDiscord }                                             from './integrations/discord-webhook.js';
-import { fetchHackerNews }                                           from './sources/hackernews.js';
-import { fetchReddit }                                               from './sources/reddit.js';
-import { fetchRemoteOk }                                             from './sources/remoteok.js';
-import { fetchCustomUrl }                                            from './sources/custom.js';
-import { fetchTwitter }                                              from './sources/twitter.js';
-import { logger }                                                    from './utils/logger.js';
+import { loadEnv, loadProfile, loadBusinesses, loadSourcesConfig } from '../../utils/config.js';
+import { loadSeenIds, saveSeenIds, appendSignal }                   from '../../utils/store.js';
+import { preFilter, qualify }                                        from '../../agents/qualifier.js';
+import { resolveNotification }                                       from '../../agents/router.js';
+import { notifyDiscord }                                             from '../../integrations/discord-webhook.js';
+import { fetchHackerNews }                                           from '../../sources/hackernews.js';
+import { fetchReddit }                                               from '../../sources/reddit.js';
+import { fetchRemoteOk }                                             from '../../sources/remoteok.js';
+import { fetchCustomUrl }                                            from '../../sources/custom.js';
+import { fetchTwitter }                                              from '../../sources/twitter.js';
+import { logger }                                                    from '../../utils/logger.js';
+import { argValue }                                                  from '../../utils/args.js';
 
 loadEnv();
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-export function argValue(args, flag) {
-    const idx = args.indexOf(flag);
-    if (idx >= 0 && args[idx + 1]) return args[idx + 1];
-    const prefixed = args.find(a => a.startsWith(flag + '='));
-    return prefixed ? prefixed.split('=').slice(1).join('=') : null;
-}
-
-// ── Source registry ───────────────────────────────────────────────────────────
 const SOURCE_FETCHERS = {
-    hackernews: (p, cfg) => fetchHackerNews(p, cfg),
-    reddit:     (p, cfg) => fetchReddit(p, cfg),
-    remoteok:   (p, cfg) => fetchRemoteOk(p, cfg),
-    twitter:    (p, cfg) => fetchTwitter(p, cfg),
+    hackernews: (profile, cfg) => fetchHackerNews(profile, cfg),
+    reddit:     (profile, cfg) => fetchReddit(profile, cfg),
+    remoteok:   (profile, cfg) => fetchRemoteOk(profile, cfg),
+    twitter:    (profile, cfg) => fetchTwitter(profile, cfg),
 };
 
-// ── Core scan logic (exported for cron daemon + MCP server) ──────────────────
 export async function runScan({ dryRun = false, sourceFilter = null, quiet = false, minScoreOverride = null } = {}) {
     if (!quiet) {
         console.log('');
@@ -77,12 +68,12 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
         const fetcher = SOURCE_FETCHERS[name];
         if (!fetcher) { !quiet && p.log.warn(`Unknown source "${name}" — skipping`); continue; }
 
-        // Pre-flight checks — warn early instead of silently returning 0
         if (name === 'twitter' && !process.env.TWITTER_BEARER_TOKEN) {
             !quiet && p.log.warn(`Twitter skipped — TWITTER_BEARER_TOKEN not set in .env`);
             !quiet && p.log.warn(`  Get one free at developer.x.com → Create App → Keys & Tokens`);
             continue;
         }
+
         const s = quiet ? { start: () => {}, stop: () => {} } : p.spinner();
         s.start(`Fetching ${name}...`);
         try {
@@ -128,7 +119,6 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
     const notifyMinScore = profile.notifications?.notify_min_score ?? 70;
 
     // Interleave candidates by source so each source gets a fair share of the cap.
-    // Without this, the first source would consume the entire quota every run.
     const bySource = new Map();
     for (const c of preFiltered) {
         const key = c.source;
@@ -211,13 +201,12 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
     return { saved, notified, total: allCandidates.length, redFlags };
 }
 
-// ── Run when called directly ──────────────────────────────────────────────────
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMain) {
-    const args      = process.argv.slice(2);
-    const dryRun    = args.includes('--dry-run');
-    const source    = argValue(args, '--source');
-    const minScore  = argValue(args, '--min-score');
+    const args     = process.argv.slice(2);
+    const dryRun   = args.includes('--dry-run');
+    const source   = argValue(args, '--source');
+    const minScore = argValue(args, '--min-score');
     runScan({ dryRun, sourceFilter: source, minScoreOverride: minScore ? parseInt(minScore, 10) : null }).catch(err => {
         logger.error(`Fatal: ${err.message}`);
         console.error(pc.red(`\nFatal error: ${err.message}\n`));

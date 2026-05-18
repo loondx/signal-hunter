@@ -1,26 +1,20 @@
 #!/usr/bin/env node
 // Signal Hunter — Background Scan Daemon
-// Spawns `node scan.mjs` as a child process each tick.
+// Spawns `node src/commands/scan.js` as a child process each tick.
 // A crashed scan never kills the daemon.
 
-import cron     from 'node-cron';
+import cron      from 'node-cron';
 import { spawn } from 'child_process';
 import { writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join }  from 'path';
-import { loadEnv } from './utils/config.js';
-import { logger }  from './utils/logger.js';
-import { PKG_DIR, DATA_DIR } from './utils/paths.js';
+import { loadEnv }  from '../utils/config.js';
+import { logger }   from '../utils/logger.js';
+import { PKG_DIR, DATA_DIR } from '../utils/paths.js';
+import { argValue } from '../utils/args.js';
 
 loadEnv();
 
 const PID_FILE = join(DATA_DIR, 'data/cron.pid');
-
-function argValue(args, flag) {
-    const idx = args.indexOf(flag);
-    if (idx >= 0 && args[idx + 1]) return args[idx + 1];
-    const prefixed = args.find(a => a.startsWith(flag + '='));
-    return prefixed ? prefixed.split('=').slice(1).join('=') : null;
-}
 
 function toCronExpr(interval) {
     const mins  = interval.match(/^(\d+)m$/);  if (mins)  return `*/${mins[1]} * * * *`;
@@ -33,7 +27,7 @@ function toCronExpr(interval) {
 function spawnScan() {
     return new Promise((resolve) => {
         logger.info('Cron: spawning scan...');
-        const child = spawn('node', [join(PKG_DIR, 'scan.mjs')], {
+        const child = spawn('node', [join(PKG_DIR, 'src/commands/scan.js')], {
             cwd:   PKG_DIR,
             stdio: 'inherit',
             env:   { ...process.env },

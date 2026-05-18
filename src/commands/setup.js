@@ -4,7 +4,7 @@ import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { dump } from 'js-yaml';
 import pc from 'picocolors';
 import { join } from 'path';
-import { DATA_DIR } from './utils/paths.js';
+import { DATA_DIR } from '../../utils/paths.js';
 
 function onCancel() {
     p.cancel('Setup cancelled. Run `signal-hunter setup` whenever you\'re ready.');
@@ -16,7 +16,7 @@ function guard(value) {
     return value;
 }
 
-// ── Load .env if it exists (for re-runs) ─────────────────────────────────────
+// Load .env if it exists (for re-runs — pre-populate API key prompts)
 if (existsSync(join(DATA_DIR, '.env'))) {
     for (const line of readFileSync(join(DATA_DIR, '.env'), 'utf8').split('\n')) {
         const [key, ...rest] = line.split('=');
@@ -26,11 +26,9 @@ if (existsSync(join(DATA_DIR, '.env'))) {
     }
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
 console.log('');
 p.intro(pc.bgCyan(pc.black('  Signal Hunter — Setup  ')));
 
-// Check for existing config
 if (existsSync(join(DATA_DIR, 'config/profile.yml'))) {
     const overwrite = guard(await p.confirm({
         message: 'A profile already exists. Overwrite it?',
@@ -129,10 +127,10 @@ p.note(
 const llmProvider = guard(await p.select({
     message: 'Which LLM to use?',
     options: [
-        { value: 'gemini', label: 'Google Gemini Flash',   hint: 'free tier — recommended for getting started' },
-        { value: 'openai', label: 'OpenAI GPT-4o-mini',    hint: 'paid · very fast and accurate' },
+        { value: 'gemini', label: 'Google Gemini Flash',    hint: 'free tier — recommended for getting started' },
+        { value: 'openai', label: 'OpenAI GPT-4o-mini',     hint: 'paid · very fast and accurate' },
         { value: 'claude', label: 'Anthropic Claude Haiku', hint: 'paid · excellent reasoning' },
-        { value: 'ollama', label: 'Ollama (local)',          hint: 'free · runs on your machine · 100% private' },
+        { value: 'ollama', label: 'Ollama (local)',           hint: 'free · runs on your machine · 100% private' },
     ],
 }));
 
@@ -165,9 +163,7 @@ if (keyName) {
             message: `Found existing ${keyName} in environment. Use it?`,
             initialValue: true,
         }));
-        if (reuse) {
-            apiKey = existing;
-        }
+        if (reuse) apiKey = existing;
     }
     if (!apiKey) {
         apiKey = guard(await p.password({
@@ -208,7 +204,6 @@ mkdirSync(join(DATA_DIR, 'config'), { recursive: true });
 mkdirSync(join(DATA_DIR, 'data'),   { recursive: true });
 mkdirSync(join(DATA_DIR, 'logs'),   { recursive: true });
 
-// profile.yml
 const profile = {
     version: '1',
     identity: {
@@ -220,19 +215,19 @@ const profile = {
         what_you_do:    services.what_you_do.trim(),
         buying_signals: services.buying_signals.trim(),
         red_flags: services.red_flags
-            ? services.red_flags.split(',').map((s) => s.trim()).filter(Boolean)
+            ? services.red_flags.split(',').map((v) => v.trim()).filter(Boolean)
             : [],
         budget_min: services.budget_min?.trim() || '',
     },
     llm: {
-        provider: llmProvider,
-        model:    LLM_MODELS[llmProvider],
+        provider:  llmProvider,
+        model:     LLM_MODELS[llmProvider],
         min_score: 60,
     },
     sources: {
         enabled: sourcesEnabled,
         reddit: {
-            subreddits: redditSubs.split(',').map((s) => s.trim().replace(/^r\//, '')).filter(Boolean),
+            subreddits: redditSubs.split(',').map((v) => v.trim().replace(/^r\//, '')).filter(Boolean),
         },
     },
     notifications: {
@@ -244,7 +239,6 @@ const profile = {
 
 writeFileSync(join(DATA_DIR, 'config/profile.yml'), dump(profile, { lineWidth: 120 }));
 
-// .env
 const envLines = [
     '# Signal Hunter — API Keys',
     '# DO NOT commit this file to git (it is in .gitignore)',
@@ -256,7 +250,6 @@ if (discordWebhook)            envLines.push('', `DISCORD_WEBHOOK_URL=${discordW
 
 writeFileSync(join(DATA_DIR, '.env'), envLines.join('\n') + '\n');
 
-// Initialize empty pipeline if it doesn't exist
 if (!existsSync(join(DATA_DIR, 'data/signals.md'))) {
     writeFileSync(join(DATA_DIR, 'data/signals.md'), [
         '# Signal Pipeline',
@@ -267,10 +260,9 @@ if (!existsSync(join(DATA_DIR, 'data/signals.md'))) {
     ].join('\n'));
 }
 
-// Copy example files if real ones don't exist yet
 for (const name of ['businesses', 'sources']) {
-    const target = `${join(DATA_DIR, "config/")}${name}.yml`;
-    const example = `${join(DATA_DIR, "config/")}${name}.example.yml`;
+    const target  = join(DATA_DIR, `config/${name}.yml`);
+    const example = join(DATA_DIR, `config/${name}.example.yml`);
     if (!existsSync(target) && existsSync(example)) {
         writeFileSync(target, readFileSync(example));
     }
@@ -278,7 +270,6 @@ for (const name of ['businesses', 'sources']) {
 
 s.stop('Configuration saved.');
 
-// ── Summary ────────────────────────────────────────────────────────────────
 const firstName = identity.name.trim().split(' ')[0];
 
 p.note(
@@ -292,8 +283,7 @@ p.note(
         `  ${pc.cyan('signal-hunter doctor')}  → verify everything is working`,
         `  ${pc.cyan('signal-hunter scan')}    → find your first signals`,
         '',
-        pc.dim('To automate: add `signal-hunter scan` to your crontab'),
-        pc.dim('  Example: */30 * * * * cd /path/to/signal-hunter && signal-hunter scan'),
+        pc.dim('To automate: signal-hunter cron start --interval 30m'),
     ].join('\n'),
     'You\'re all set!'
 );

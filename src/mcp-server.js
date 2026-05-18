@@ -10,7 +10,7 @@
  *   "mcpServers": {
  *     "signal-hunter": {
  *       "command": "node",
- *       "args": ["/absolute/path/to/signal-hunter/mcp-server.mjs"]
+ *       "args": ["/absolute/path/to/signal-hunter/src/mcp-server.js"]
  *     }
  *   }
  * }
@@ -23,25 +23,25 @@
  * }
  */
 
-import { Server }              from '@modelcontextprotocol/sdk/server/index.js';
+import { Server }               from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
     CallToolRequestSchema,
     ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-import { loadEnv, loadProfile, loadBusinesses, loadSourcesConfig } from './utils/config.js';
-import { loadSignals, loadSeenIds, saveSeenIds, appendSignal }      from './utils/store.js';
-import { preFilter, qualify }                                        from './agents/qualifier.js';
-import { resolveNotification }                                       from './agents/router.js';
-import { notifyDiscord }                                             from './integrations/discord-webhook.js';
-import { fetchHackerNews }                                           from './sources/hackernews.js';
-import { fetchReddit }                                               from './sources/reddit.js';
-import { fetchRemoteOk }                                             from './sources/remoteok.js';
-import { logger }                                                    from './utils/logger.js';
+import { loadEnv, loadProfile, loadBusinesses, loadSourcesConfig } from '../utils/config.js';
+import { loadSignals, loadSeenIds, saveSeenIds, appendSignal }      from '../utils/store.js';
+import { preFilter, qualify }                                        from '../agents/qualifier.js';
+import { resolveNotification }                                       from '../agents/router.js';
+import { notifyDiscord }                                             from '../integrations/discord-webhook.js';
+import { fetchHackerNews }                                           from '../sources/hackernews.js';
+import { fetchReddit }                                               from '../sources/reddit.js';
+import { fetchRemoteOk }                                             from '../sources/remoteok.js';
+import { logger }                                                    from '../utils/logger.js';
 import { readFileSync, writeFileSync, existsSync }                   from 'fs';
 import { join }                                                      from 'path';
-import { DATA_DIR }                                                  from './utils/paths.js';
+import { DATA_DIR }                                                  from '../utils/paths.js';
 
 loadEnv();
 
@@ -54,7 +54,7 @@ const SOURCE_FETCHERS = {
     remoteok:   (p, cfg) => fetchRemoteOk(p, cfg),
 };
 
-// ── MCP server setup ─────────────────────────────────────────────────────────
+// ── MCP server setup ──────────────────────────────────────────────────────────
 const server = new Server(
     { name: 'signal-hunter', version: '0.1.0' },
     { capabilities: { tools: {} } }
@@ -69,7 +69,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             inputSchema: {
                 type: 'object',
                 properties: {
-                    source:  { type: 'string', description: 'Scan only this source (hackernews|reddit|remoteok). Omit to scan all.' },
+                    source:  { type: 'string',  description: 'Scan only this source (hackernews|reddit|remoteok). Omit to scan all.' },
                     dry_run: { type: 'boolean', description: 'If true, qualify signals but do not save or notify.', default: false },
                 },
             },
@@ -80,9 +80,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             inputSchema: {
                 type: 'object',
                 properties: {
-                    min_score: { type: 'number',  description: 'Minimum score (0-100). Default 0.', default: 0 },
-                    status:    { type: 'string',  description: 'Filter by status: new|replied|skipped', default: 'new' },
-                    limit:     { type: 'number',  description: 'Max results to return.', default: 20 },
+                    min_score: { type: 'number', description: 'Minimum score (0-100). Default 0.',           default: 0 },
+                    status:    { type: 'string', description: 'Filter by status: new|replied|skipped',        default: 'new' },
+                    limit:     { type: 'number', description: 'Max results to return.',                       default: 20 },
                 },
             },
         },
@@ -132,8 +132,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     : (profile.sources?.enabled || ['hackernews', 'reddit', 'remoteok']);
 
                 const allCandidates = [];
-                for (const name of enabledSources) {
-                    const fetcher = SOURCE_FETCHERS[name];
+                for (const sourceName of enabledSources) {
+                    const fetcher = SOURCE_FETCHERS[sourceName];
                     if (!fetcher) continue;
                     try {
                         const raw   = await fetcher(profile, sourcesConfig);
@@ -141,7 +141,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                         raw.forEach(r => seenIds.add(r.id));
                         allCandidates.push(...fresh);
                     } catch (err) {
-                        logger.error(`MCP scan source ${name}: ${err.message}`);
+                        logger.error(`MCP scan source ${sourceName}: ${err.message}`);
                     }
                 }
 
@@ -150,7 +150,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     return { content: [{ type: 'text', text: 'No new signals found across all sources.' }] };
                 }
 
-                const minScore = profile.llm?.min_score ?? 60;
+                const minScore       = profile.llm?.min_score ?? 60;
                 const notifyMinScore = profile.notifications?.notify_min_score ?? 70;
                 let saved = 0, notified = 0;
                 const savedSignals = [];
@@ -202,8 +202,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const limit    = args?.limit      ?? 20;
 
                 let signals = loadSignals();
-                if (minScore > 0)  signals = signals.filter(s => s.score >= minScore);
-                if (status)        signals = signals.filter(s => s.status === status);
+                if (minScore > 0) signals = signals.filter(s => s.score >= minScore);
+                if (status)       signals = signals.filter(s => s.status === status);
                 signals = signals.sort((a, b) => b.score - a.score).slice(0, limit);
 
                 if (signals.length === 0) {

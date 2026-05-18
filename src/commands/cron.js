@@ -1,22 +1,16 @@
 #!/usr/bin/env node
 // signal-hunter cron <start|stop|status|logs|install> [options]
-import { spawn }                                              from 'child_process';
+import { spawn }                                                     from 'child_process';
 import { existsSync, readFileSync, unlinkSync, mkdirSync, openSync } from 'fs';
-import { join }                                               from 'path';
-import pc                                                     from 'picocolors';
-import { loadEnv }                                            from './utils/config.js';
-import { PKG_DIR, DATA_DIR }                                  from './utils/paths.js';
+import { join }                                                      from 'path';
+import pc                                                            from 'picocolors';
+import { loadEnv }                                                   from '../../utils/config.js';
+import { PKG_DIR, DATA_DIR }                                         from '../../utils/paths.js';
+import { argValue }                                                  from '../../utils/args.js';
 
 loadEnv();
 
 const PID_FILE = join(DATA_DIR, 'data/cron.pid');
-
-function argValue(args, flag) {
-    const idx = args.indexOf(flag);
-    if (idx >= 0 && args[idx + 1]) return args[idx + 1];
-    const prefixed = args.find(a => a.startsWith(flag + '='));
-    return prefixed ? prefixed.split('=').slice(1).join('=') : null;
-}
 
 function isRunning(pid) {
     try { process.kill(pid, 0); return true; } catch { return false; }
@@ -43,7 +37,7 @@ function cmdStart(args) {
 
     if (foreground) {
         console.log(`\n  Starting in foreground (every ${interval}). Press Ctrl+C to stop.\n`);
-        const child = spawn('node', [join(PKG_DIR, 'cron-daemon.mjs'), '--interval', interval], {
+        const child = spawn('node', [join(PKG_DIR, 'src/daemon.js'), '--interval', interval], {
             cwd: PKG_DIR, stdio: 'inherit',
         });
         child.on('exit', code => process.exit(code ?? 0));
@@ -53,7 +47,7 @@ function cmdStart(args) {
     // Background mode — detached process, logs to file
     mkdirSync(join(DATA_DIR, 'logs'), { recursive: true });
     const logFd = openSync(join(DATA_DIR, 'logs/cron.log'), 'a');
-    const child = spawn('node', [join(PKG_DIR, 'cron-daemon.mjs'), '--interval', interval], {
+    const child = spawn('node', [join(PKG_DIR, 'src/daemon.js'), '--interval', interval], {
         cwd: PKG_DIR, stdio: ['ignore', logFd, logFd], detached: true,
     });
     child.unref();
@@ -146,7 +140,7 @@ ${pc.bold('  Choose your automation method:')}
   ${pc.bold(pc.cyan('2. PM2'))} ${pc.dim('(recommended for VPS — auto-restarts on crash)')}
   ───────────────────────────────────────────
   ${pc.green(`npm install -g pm2`)}
-  ${pc.green(`pm2 start ${absPath}/cron-daemon.mjs --name signal-hunter -- --interval ${interval}`)}
+  ${pc.green(`pm2 start ${absPath}/src/daemon.js --name signal-hunter -- --interval ${interval}`)}
   ${pc.green(`pm2 save && pm2 startup`)}
 
   ${pc.bold(pc.cyan('3. Built-in daemon'))} ${pc.dim('(background process, lost on reboot)')}
@@ -165,7 +159,7 @@ ${pc.dim(`  [Unit]
   Type=simple
   User=${process.env.USER || 'ubuntu'}
   WorkingDirectory=${absPath}
-  ExecStart=/usr/bin/node ${absPath}/cron-daemon.mjs --interval ${interval}
+  ExecStart=/usr/bin/node ${absPath}/src/daemon.js --interval ${interval}
   Restart=on-failure
   RestartSec=10
 
@@ -177,8 +171,8 @@ ${pc.dim(`  [Unit]
 }
 
 // ── Route subcommand ──────────────────────────────────────────────────────────
-// When called via CLI:    process.argv = [node, cron.mjs, 'cron', 'start', ...]
-// When called directly:   process.argv = [node, cron.mjs, 'start', ...]
+// When called via CLI:    process.argv = [node, cron.js, 'cron', 'start', ...]
+// When called directly:   process.argv = [node, cron.js, 'start', ...]
 const rawArgs = process.argv.slice(2);
 const args    = rawArgs[0] === 'cron' ? rawArgs.slice(1) : rawArgs;
 const subcmd  = args[0];
