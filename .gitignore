@@ -8,9 +8,12 @@ config/sources.yml
 # API keys
 .env
 
-# Signal pipeline data — this is YOUR private data
+# Signal pipeline and scan state — this is YOUR private data
+data/signals.json
+data/seen-ids.json
 data/signals.md
 data/scan-history.tsv
+data/cron.pid
 
 # Logs
 logs/
@@ -18,3 +21,4 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+*.log

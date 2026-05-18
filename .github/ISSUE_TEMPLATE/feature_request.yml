@@ -1,0 +1,40 @@
+name: Feature Request
+description: Suggest a new source, LLM, or capability
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: What type of feature?
+      options:
+        - New source (Reddit search, LinkedIn, Wellfound, etc.)
+        - New LLM provider
+        - New notification channel (Slack, email, Telegram)
+        - Better filtering / scoring
+        - New CLI command
+        - MCP server improvement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      placeholder: "I'm trying to find leads from X but there's no source for it..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe your proposed solution
+      placeholder: "Add a source that fetches from X using Y API..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      placeholder: "I tried using custom URLs but it doesn't work for dynamic content..."

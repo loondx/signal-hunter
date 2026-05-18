@@ -52,8 +52,16 @@
     "business-development",
     "open-source"
   ],
-  "author": "",
+  "author": "Pankaj Kumar <pankajkumar.techie@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/signal-hunter.git"
+  },
+  "homepage": "https://github.com/yourusername/signal-hunter#readme",
+  "bugs": {
+    "url": "https://github.com/yourusername/signal-hunter/issues"
+  },
   "dependencies": {
     "@clack/prompts": "^0.9.0",
     "@google/generative-ai": "^0.24.1",
