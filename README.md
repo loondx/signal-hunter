@@ -127,7 +127,7 @@ signal-hunter setup
 git clone https://github.com/loondx/signal-hunter
 cd signal-hunter
 npm install
-npm run setup      # or: node setup.mjs
+npm run setup      # or: node src/commands/setup.js
 ```
 
 ---
@@ -278,7 +278,7 @@ Signal Hunter exposes itself as an [MCP server](https://modelcontextprotocol.io)
   "mcpServers": {
     "signal-hunter": {
       "command": "node",
-      "args": ["/absolute/path/to/signal-hunter/mcp-server.mjs"]
+      "args": ["/absolute/path/to/signal-hunter/src/mcp-server.js"]
     }
   }
 }
@@ -295,7 +295,7 @@ Now ask Claude: *"Scan for new leads and show me anything above 70"* — from in
 ```bash
 # Recommended: PM2 (auto-restart on crash)
 npm install -g pm2
-pm2 start cron-daemon.mjs --name signal-hunter -- --interval 30m
+pm2 start src/daemon.js --name signal-hunter -- --interval 30m
 pm2 save && pm2 startup
 
 # Or: built-in daemon
@@ -311,15 +311,19 @@ signal-hunter cron install    # prints the exact line to add
 
 ```
 signal-hunter/
-├── setup.mjs              ← Setup wizard
-├── doctor.mjs             ← Health check
-├── scan.mjs               ← Main scanner
-├── list.mjs               ← Pipeline viewer
-├── manage.mjs             ← reply / skip / open
-├── cron.mjs               ← Cron commands
-├── cron-daemon.mjs        ← Background daemon
-├── mcp-server.mjs         ← MCP server
-├── bin/cli.js             ← CLI entry point
+├── bin/
+│   └── cli.js             ← CLI entry point + command dispatcher
+├── src/
+│   ├── commands/
+│   │   ├── scan.js        ← Main scanner
+│   │   ├── list.js        ← Pipeline viewer
+│   │   ├── cron.js        ← Cron management (start/stop/status/logs)
+│   │   ├── manage.js      ← reply / skip / open
+│   │   ├── doctor.js      ← Health check
+│   │   ├── setup.js       ← Setup wizard
+│   │   └── update.js      ← Self-updater
+│   ├── daemon.js          ← Background scan daemon
+│   └── mcp-server.js      ← MCP server (Claude Code, Cursor, VS Code)
 ├── agents/
 │   ├── qualifier.js       ← AI scoring engine (multi-LLM)
 │   └── router.js          ← Multi-business notification routing
@@ -332,8 +336,10 @@ signal-hunter/
 ├── integrations/
 │   └── discord-webhook.js ← Discord webhook sender
 ├── utils/
+│   ├── args.js            ← CLI argument parser
 │   ├── config.js          ← YAML config loader
 │   ├── store.js           ← Signal pipeline (JSON store)
+│   ├── paths.js           ← PKG_DIR / DATA_DIR resolver
 │   └── logger.js          ← Async file logger
 └── config/
     ├── profile.example.yml
