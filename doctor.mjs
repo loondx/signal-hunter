@@ -38,7 +38,10 @@ if (major >= 20) {
 
 // 2. Config dir + profile.yml
 if (!existsSync(join(DATA_DIR, 'config/profile.yml'))) {
-    results.push(fail('config/profile.yml not found', 'Run: signal-hunter setup'));
+    results.push(fail(
+        `config/profile.yml not found  ${pc.dim('(' + join(DATA_DIR, 'config/profile.yml') + ')')}`,
+        'Run: signal-hunter setup'
+    ));
 } else {
     try {
         profile = load(readFileSync(join(DATA_DIR, 'config/profile.yml'), 'utf8'));
