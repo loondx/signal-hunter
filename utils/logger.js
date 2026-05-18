@@ -1,21 +1,18 @@
 import { appendFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import pc from 'picocolors';
+import { existsSync }        from 'fs';
+import { join }              from 'path';
+import pc                    from 'picocolors';
+import { DATA_DIR }          from './paths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const LOG_DIR = join(__dirname, '../logs');
+const LOG_DIR  = join(DATA_DIR, 'logs');
 const LOG_FILE = join(LOG_DIR, 'app.log');
 
 async function ensureLogDir() {
-    if (!existsSync(LOG_DIR)) {
-        await mkdir(LOG_DIR, { recursive: true });
-    }
+    if (!existsSync(LOG_DIR)) await mkdir(LOG_DIR, { recursive: true });
 }
 
 async function write(level, message) {
-    const ts = new Date().toISOString();
+    const ts   = new Date().toISOString();
     const text = typeof message === 'object' ? JSON.stringify(message) : String(message);
     const line = `[${ts}] [${level}] ${text}\n`;
 

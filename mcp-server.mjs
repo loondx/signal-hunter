@@ -40,13 +40,12 @@ import { fetchReddit }                                               from './sou
 import { fetchRemoteOk }                                             from './sources/remoteok.js';
 import { logger }                                                    from './utils/logger.js';
 import { readFileSync, writeFileSync, existsSync }                   from 'fs';
-import { join, dirname }                                             from 'path';
-import { fileURLToPath }                                             from 'url';
+import { join }                                                      from 'path';
+import { DATA_DIR }                                                  from './utils/paths.js';
 
 loadEnv();
 
-const ROOT         = dirname(fileURLToPath(import.meta.url));
-const SIGNALS_PATH = join(ROOT, 'data/signals.json');
+const SIGNALS_PATH = join(DATA_DIR, 'data/signals.json');
 const sleep        = (ms) => new Promise(r => setTimeout(r, ms));
 
 const SOURCE_FETCHERS = {

@@ -2,15 +2,14 @@
 // signal-hunter cron <start|stop|status|logs|install> [options]
 import { spawn }                                              from 'child_process';
 import { existsSync, readFileSync, unlinkSync, mkdirSync, openSync } from 'fs';
-import { dirname, join }                                      from 'path';
-import { fileURLToPath }                                      from 'url';
+import { join }                                               from 'path';
 import pc                                                     from 'picocolors';
 import { loadEnv }                                            from './utils/config.js';
+import { PKG_DIR, DATA_DIR }                                  from './utils/paths.js';
 
 loadEnv();
 
-const ROOT     = dirname(fileURLToPath(import.meta.url));
-const PID_FILE = join(ROOT, 'data/cron.pid');
+const PID_FILE = join(DATA_DIR, 'data/cron.pid');
 
 function argValue(args, flag) {
     const idx = args.indexOf(flag);
@@ -44,18 +43,18 @@ function cmdStart(args) {
 
     if (foreground) {
         console.log(`\n  Starting in foreground (every ${interval}). Press Ctrl+C to stop.\n`);
-        const child = spawn('node', [join(ROOT, 'cron-daemon.mjs'), '--interval', interval], {
-            cwd: ROOT, stdio: 'inherit',
+        const child = spawn('node', [join(PKG_DIR, 'cron-daemon.mjs'), '--interval', interval], {
+            cwd: PKG_DIR, stdio: 'inherit',
         });
         child.on('exit', code => process.exit(code ?? 0));
         return;
     }
 
     // Background mode — detached process, logs to file
-    mkdirSync(join(ROOT, 'logs'), { recursive: true });
-    const logFd = openSync(join(ROOT, 'logs/cron.log'), 'a');
-    const child = spawn('node', [join(ROOT, 'cron-daemon.mjs'), '--interval', interval], {
-        cwd: ROOT, stdio: ['ignore', logFd, logFd], detached: true,
+    mkdirSync(join(DATA_DIR, 'logs'), { recursive: true });
+    const logFd = openSync(join(DATA_DIR, 'logs/cron.log'), 'a');
+    const child = spawn('node', [join(PKG_DIR, 'cron-daemon.mjs'), '--interval', interval], {
+        cwd: PKG_DIR, stdio: ['ignore', logFd, logFd], detached: true,
     });
     child.unref();
 
@@ -116,7 +115,7 @@ function cmdStatus() {
 }
 
 function cmdLogs() {
-    const logFile = join(ROOT, 'logs/cron.log');
+    const logFile = join(DATA_DIR, 'logs/cron.log');
     if (!existsSync(logFile)) {
         console.log('\n  No log file yet — daemon has not run.\n');
         return;
@@ -128,7 +127,7 @@ function cmdLogs() {
 
 function cmdInstall(args) {
     const interval = argValue(args, '--interval') || '30m';
-    const absPath  = ROOT;
+    const absPath  = DATA_DIR;
 
     const mins  = interval.match(/^(\d+)m$/);
     const hours = interval.match(/^(\d+)h$/);

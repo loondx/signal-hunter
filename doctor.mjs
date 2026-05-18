@@ -2,11 +2,13 @@
 import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs';
 import { load } from 'js-yaml';
+import { join } from 'path';
+import { DATA_DIR } from './utils/paths.js';
 import pc from 'picocolors';
 
 // ── Load .env before checking env vars ───────────────────────────────────────
-if (existsSync('./.env')) {
-    for (const line of readFileSync('./.env', 'utf8').split('\n')) {
+if (existsSync(join(DATA_DIR, '.env'))) {
+    for (const line of readFileSync(join(DATA_DIR, '.env'), 'utf8').split('\n')) {
         const [key, ...rest] = line.split('=');
         if (key?.trim() && !key.startsWith('#') && rest.length) {
             process.env[key.trim()] ??= rest.join('=').trim();
@@ -35,11 +37,11 @@ if (major >= 20) {
 }
 
 // 2. Config dir + profile.yml
-if (!existsSync('./config/profile.yml')) {
+if (!existsSync(join(DATA_DIR, 'config/profile.yml'))) {
     results.push(fail('config/profile.yml not found', 'Run: signal-hunter setup'));
 } else {
     try {
-        profile = load(readFileSync('./config/profile.yml', 'utf8'));
+        profile = load(readFileSync(join(DATA_DIR, 'config/profile.yml'), 'utf8'));
         results.push(ok('config/profile.yml — found and valid'));
     } catch (e) {
         results.push(fail('config/profile.yml — invalid YAML', `Fix the YAML error: ${e.message}`));
@@ -47,7 +49,7 @@ if (!existsSync('./config/profile.yml')) {
 }
 
 // 3. .env file
-if (!existsSync('./.env')) {
+if (!existsSync(join(DATA_DIR, '.env'))) {
     results.push(warn('.env file not found', 'Run: signal-hunter setup — or copy .env.example to .env'));
 } else {
     results.push(ok('.env file found'));
@@ -107,9 +109,9 @@ if (profile?.sources?.enabled) {
 }
 
 // 7. Optional: businesses.yml
-if (existsSync('./config/businesses.yml')) {
+if (existsSync(join(DATA_DIR, 'config/businesses.yml'))) {
     try {
-        const biz = load(readFileSync('./config/businesses.yml', 'utf8'));
+        const biz = load(readFileSync(join(DATA_DIR, 'config/businesses.yml'), 'utf8'));
         const count = biz?.businesses?.length ?? 0;
         results.push(ok(`config/businesses.yml — ${count} business(es) configured`));
     } catch {
@@ -120,7 +122,7 @@ if (existsSync('./config/businesses.yml')) {
 }
 
 // 7. Pipeline file
-if (existsSync('./data/signals.md')) {
+if (existsSync(join(DATA_DIR, 'data/signals.md'))) {
     results.push(ok('data/signals.md — pipeline file exists'));
 } else {
     results.push(warn('data/signals.md not found', 'It will be created on first scan'));

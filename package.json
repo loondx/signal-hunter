@@ -8,13 +8,15 @@
     "signal-hunter-mcp": "./mcp-server.mjs"
   },
   "scripts": {
-    "setup":  "node setup.mjs",
+    "setup": "node setup.mjs",
     "doctor": "node doctor.mjs",
-    "scan":   "node scan.mjs",
-    "list":   "node list.mjs",
-    "cron":   "node cron-daemon.mjs",
-    "mcp":    "node mcp-server.mjs",
-    "start":  "node cron-daemon.mjs"
+    "scan": "node scan.mjs",
+    "list": "node list.mjs",
+    "cron": "node cron-daemon.mjs",
+    "mcp": "node mcp-server.mjs",
+    "start": "node cron-daemon.mjs",
+    "update": "node update.mjs",
+    "version": "node bin/cli.js version"
   },
   "files": [
     "bin/",
@@ -34,7 +36,11 @@
     "manage.mjs",
     "mcp-server.mjs",
     ".env.example",
-    "README.md"
+    "README.md",
+    "install.sh",
+    "uninstall.sh",
+    "update.mjs",
+    "utils/paths.js"
   ],
   "publishConfig": {
     "access": "public"

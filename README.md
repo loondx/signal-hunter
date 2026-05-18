@@ -58,25 +58,36 @@ I was manually scanning Reddit, Hacker News, and job boards every morning lookin
 
 ## Quick Start
 
+**One command** — installs to `~/.signal-hunter`, adds `signal-hunter` to your PATH:
+
 ```bash
-# 1. Clone
-git clone https://github.com/loondx/signal-hunter
-cd signal-hunter
-
-# 2. Install
-npm install
-
-# 3. Setup (2-minute wizard — walks you through everything)
-npm run setup
-
-# 4. Verify
-npm run doctor
-
-# 5. Hunt
-npm run scan
+curl -fsSL https://raw.githubusercontent.com/loondx/signal-hunter/main/install.sh | bash
 ```
 
-**That's it.** No account. No server. No credit card. Works on any machine with Node.js 20+.
+Then follow the prompts:
+
+```bash
+signal-hunter setup     # 2-minute wizard — API key, sources, notifications
+signal-hunter doctor    # verify everything is working
+signal-hunter scan      # find your first signals
+```
+
+> **No account. No server. No credit card.** Works on any machine or VPS with Node.js 20+.
+> Each user installs their own instance — your data never leaves your machine.
+
+### Manual install (alternative)
+
+```bash
+git clone https://github.com/loondx/signal-hunter ~/.signal-hunter
+cd ~/.signal-hunter && npm install
+~/.signal-hunter/bin/cli.js setup
+```
+
+### Update
+
+```bash
+signal-hunter update    # pulls latest code from GitHub
+```
 
 ---
 

@@ -7,13 +7,12 @@ import { execSync }              from 'child_process';
 import { loadEnv }               from './utils/config.js';
 import { loadSignals }           from './utils/store.js';
 import { writeFileSync }         from 'fs';
-import { join, dirname }         from 'path';
-import { fileURLToPath }         from 'url';
+import { join }                  from 'path';
+import { DATA_DIR }              from './utils/paths.js';
 
 loadEnv();
 
-const ROOT        = dirname(fileURLToPath(import.meta.url));
-const SIGNALS_PATH = join(ROOT, 'data/signals.json');
+const SIGNALS_PATH = join(DATA_DIR, 'data/signals.json');
 
 function updateSignalStatus(num, status) {
     const signals = loadSignals();

@@ -3,6 +3,8 @@ import * as p from '@clack/prompts';
 import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { dump } from 'js-yaml';
 import pc from 'picocolors';
+import { join } from 'path';
+import { DATA_DIR } from './utils/paths.js';
 
 function onCancel() {
     p.cancel('Setup cancelled. Run `signal-hunter setup` whenever you\'re ready.');
@@ -15,8 +17,8 @@ function guard(value) {
 }
 
 // ── Load .env if it exists (for re-runs) ─────────────────────────────────────
-if (existsSync('./.env')) {
-    for (const line of readFileSync('./.env', 'utf8').split('\n')) {
+if (existsSync(join(DATA_DIR, '.env'))) {
+    for (const line of readFileSync(join(DATA_DIR, '.env'), 'utf8').split('\n')) {
         const [key, ...rest] = line.split('=');
         if (key && !key.startsWith('#') && rest.length) {
             process.env[key.trim()] ??= rest.join('=').trim();
@@ -29,7 +31,7 @@ console.log('');
 p.intro(pc.bgCyan(pc.black('  Signal Hunter — Setup  ')));
 
 // Check for existing config
-if (existsSync('./config/profile.yml')) {
+if (existsSync(join(DATA_DIR, 'config/profile.yml'))) {
     const overwrite = guard(await p.confirm({
         message: 'A profile already exists. Overwrite it?',
         initialValue: false,
@@ -202,9 +204,9 @@ if (wantsDiscord) {
 const s = p.spinner();
 s.start('Writing your configuration...');
 
-mkdirSync('./config', { recursive: true });
-mkdirSync('./data',   { recursive: true });
-mkdirSync('./logs',   { recursive: true });
+mkdirSync(join(DATA_DIR, 'config'), { recursive: true });
+mkdirSync(join(DATA_DIR, 'data'),   { recursive: true });
+mkdirSync(join(DATA_DIR, 'logs'),   { recursive: true });
 
 // profile.yml
 const profile = {
@@ -240,7 +242,7 @@ const profile = {
     },
 };
 
-writeFileSync('./config/profile.yml', dump(profile, { lineWidth: 120 }));
+writeFileSync(join(DATA_DIR, 'config/profile.yml'), dump(profile, { lineWidth: 120 }));
 
 // .env
 const envLines = [
@@ -252,11 +254,11 @@ if (llmProvider !== 'ollama') envLines.push(`${keyName}=${apiKey}`);
 if (llmProvider === 'ollama')  envLines.push('OLLAMA_BASE_URL=http://localhost:11434');
 if (discordWebhook)            envLines.push('', `DISCORD_WEBHOOK_URL=${discordWebhook}`);
 
-writeFileSync('./.env', envLines.join('\n') + '\n');
+writeFileSync(join(DATA_DIR, '.env'), envLines.join('\n') + '\n');
 
 // Initialize empty pipeline if it doesn't exist
-if (!existsSync('./data/signals.md')) {
-    writeFileSync('./data/signals.md', [
+if (!existsSync(join(DATA_DIR, 'data/signals.md'))) {
+    writeFileSync(join(DATA_DIR, 'data/signals.md'), [
         '# Signal Pipeline',
         '',
         '| # | Date | Source | Signal Summary | Score | Business | Status |',
@@ -267,8 +269,8 @@ if (!existsSync('./data/signals.md')) {
 
 // Copy example files if real ones don't exist yet
 for (const name of ['businesses', 'sources']) {
-    const target = `./config/${name}.yml`;
-    const example = `./config/${name}.example.yml`;
+    const target = `${join(DATA_DIR, "config/")}${name}.yml`;
+    const example = `${join(DATA_DIR, "config/")}${name}.example.yml`;
     if (!existsSync(target) && existsSync(example)) {
         writeFileSync(target, readFileSync(example));
     }
@@ -281,10 +283,10 @@ const firstName = identity.name.trim().split(' ')[0];
 
 p.note(
     [
-        `${pc.green('✓')} Profile     ${pc.cyan('./config/profile.yml')}`,
-        `${pc.green('✓')} API Keys    ${pc.cyan('./.env')} ${pc.dim('(gitignored — your keys stay private)')}`,
-        `${pc.green('✓')} Pipeline    ${pc.cyan('./data/signals.md')}`,
-        `${pc.green('✓')} Businesses  ${pc.cyan('./config/businesses.yml')} ${pc.dim('(edit to add partner businesses)')}`,
+        `${pc.green('✓')} Profile     ${pc.cyan(join(DATA_DIR, 'config/profile.yml'))}`,
+        `${pc.green('✓')} API Keys    ${pc.cyan(join(DATA_DIR, '.env'))} ${pc.dim('(gitignored — your keys stay private)')}`,
+        `${pc.green('✓')} Pipeline    ${pc.cyan(join(DATA_DIR, 'data/signals.md'))}`,
+        `${pc.green('✓')} Businesses  ${pc.cyan(join(DATA_DIR, 'config/businesses.yml'))} ${pc.dim('(edit to add partner businesses)')}`,
         '',
         pc.bold('Next steps:'),
         `  ${pc.cyan('signal-hunter doctor')}  → verify everything is working`,
