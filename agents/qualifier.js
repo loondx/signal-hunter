@@ -108,7 +108,8 @@ SCORING RUBRIC (be strict — most posts are discussions, not client leads):
 0-29   → NO LEAD: full-time employment, student question, pure discussion, large enterprise post
 
 FREELANCE PLATFORM BONUS:
-- Posts from RemoteOK, Remotive = likely paid work, start score at 55+
+- Posts from Remotive = pre-filtered contract/freelance only — start score at 65+
+- Posts from RemoteOK = pre-filtered to remove full-time — start score at 60+
 - Posts from r/forhire, r/freelance_forhire, r/for_hire, r/hiring = likely paid work, start score at 60+
 - HackerNews "Who is Hiring?" = real jobs, score based on fit
 

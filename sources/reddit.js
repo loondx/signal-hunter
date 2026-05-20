@@ -117,11 +117,17 @@ async function fetchSubredditRSS(sub, limit, retries = 1) {
 
 export async function fetchReddit(profile, sourcesConfig) {
     const subreddits =
+        sourcesConfig?.subreddits ||
         sourcesConfig?.reddit?.subreddits ||
         profile.sources?.reddit?.subreddits ||
         ['forhire', 'freelance', 'webdev'];
 
-    const limit   = Math.min(sourcesConfig?.reddit?.posts_per_scan || 25, 100);
+    const limit = Math.min(
+        sourcesConfig?.posts_per_scan ||
+        sourcesConfig?.reddit?.posts_per_scan ||
+        15,
+        100
+    );
     const results = [];
     const errors  = [];
 
