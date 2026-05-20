@@ -16,6 +16,7 @@
 
 import { fetchHackerNews }  from './hackernews.js';
 import { fetchReddit }      from './reddit.js';
+import { fetchGitHub }      from './github.js';
 import { fetchRemoteOk }    from './remoteok.js';
 import { fetchRemotive }    from './remotive.js';
 import { fetchDevTo }       from './devto.js';
@@ -33,6 +34,7 @@ const TYPE_REGISTRY = {
     // Built-in named sources
     hackernews:  (id, conf, profile, cfg) => fetchHackerNews(profile, conf.config || cfg),
     reddit:      (id, conf, profile, cfg) => fetchReddit(profile, conf.config || cfg),
+    github:      (id, conf, profile, cfg) => fetchGitHub(profile, conf.config ? { github: conf } : cfg),
     remoteok:    (id, conf, profile, cfg) => fetchRemoteOk(profile, conf.config || cfg),
     remotive:    (id, conf, profile, cfg) => fetchRemotive(profile, conf.config || cfg),
     devto:       (id, conf, profile, cfg) => fetchDevTo(profile, conf.config || cfg),

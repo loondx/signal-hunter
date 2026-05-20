@@ -141,6 +141,7 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
         if (/^Web Search/i.test(src))                                               return  95;
         if (/^Hacker News Jobs/i.test(src))                                         return  92;
         if (/We Work Remotely|IndieHackers/i.test(src))                             return  88;
+        if (/^GitHub Issues/i.test(src))                                            return  82;
         if (/^Dev\.to/i.test(src))                                                  return  85;
         if (/^Hacker News/i.test(src))                                              return  75;
         // Reddit — high signal subreddits

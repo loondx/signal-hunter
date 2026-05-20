@@ -24,6 +24,13 @@ if (!isGitInstall) {
     process.exit(0);
 }
 
+// Run URL migration on every update to fix old.reddit.com in existing data
+try {
+    const { migrateSignalUrls } = await import('../utils/store.js');
+    const fixed = migrateSignalUrls();
+    if (fixed > 0) console.log('  ' + pc.green('✓') + `  Migrated ${fixed} signal URLs (old.reddit.com → www.reddit.com)`);
+} catch {}
+
 try {
     const pkg = JSON.parse(readFileSync(join(PKG_DIR, 'package.json'), 'utf8'));
     const currentHash = run('git rev-parse --short HEAD');
