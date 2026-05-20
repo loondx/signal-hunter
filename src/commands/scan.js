@@ -13,6 +13,9 @@ import { fetchRemoteOk }                                             from '../..
 import { fetchRemotive }                                             from '../../sources/remotive.js';
 import { fetchDevTo }                                               from '../../sources/devto.js';
 import { fetchWebSearch }                                           from '../../sources/websearch.js';
+import { fetchUpwork }                                             from '../../sources/upwork.js';
+import { fetchFreelancer }                                         from '../../sources/freelancer.js';
+import { fetchPeoplePerHour }                                      from '../../sources/peopleperhour.js';
 import { fetchCustomUrl }                                            from '../../sources/custom.js';
 import { fetchTwitter }                                              from '../../sources/twitter.js';
 import { getLearningContext }                                        from '../../agents/learner.js';
@@ -28,9 +31,12 @@ const SOURCE_FETCHERS = {
     reddit:     (profile, cfg) => fetchReddit(profile, cfg),
     remoteok:   (profile, cfg) => fetchRemoteOk(profile, cfg),
     remotive:   (profile, cfg) => fetchRemotive(profile, cfg),
-    devto:      (profile, cfg) => fetchDevTo(profile, cfg),
-    websearch:  (profile, cfg) => fetchWebSearch(profile, cfg),
-    twitter:    (profile, cfg) => fetchTwitter(profile, cfg),
+    devto:         (profile, cfg) => fetchDevTo(profile, cfg),
+    websearch:     (profile, cfg) => fetchWebSearch(profile, cfg),
+    upwork:        (profile, cfg) => fetchUpwork(profile, cfg),
+    freelancer:    (profile, cfg) => fetchFreelancer(profile, cfg),
+    peopleperhour: (profile, cfg) => fetchPeoplePerHour(profile, cfg),
+    twitter:       (profile, cfg) => fetchTwitter(profile, cfg),
 };
 
 export async function runScan({ dryRun = false, sourceFilter = null, quiet = false, minScoreOverride = null } = {}) {
@@ -149,15 +155,21 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
     // before discussion threads.
     function sourcePriority(src) {
         if (!src) return 10;
-        if (/^(Remote OK|Remotive)/i.test(src))                                    return 100; // paid job listings
-        if (/^Web Search/i.test(src))                                               return  95; // targeted internet search
-        if (/^Dev\.to/i.test(src))                                                  return  85; // dev community with #hiring
-        if (/^Hacker News Jobs/i.test(src))                                         return  90; // HN direct job posts
+        // Credentialed / premium — highest confidence clients with real budgets
+        if (/^Upwork/i.test(src))                                                   return 110;
+        if (/^Freelancer\.com/i.test(src))                                          return 108;
+        if (/^PeoplePerHour/i.test(src))                                            return 105;
+        // Free job boards — curated, real job listings
+        if (/^(Remote OK|Remotive)/i.test(src))                                     return 100;
+        if (/^Web Search/i.test(src))                                               return  95;
+        if (/^Hacker News Jobs/i.test(src))                                         return  92;
+        if (/We Work Remotely|IndieHackers/i.test(src))                             return  88;
+        if (/^Dev\.to/i.test(src))                                                  return  85;
         if (/^Hacker News/i.test(src))                                              return  75;
-        if (/We Work Remotely|IndieHackers/i.test(src))                             return  80;
+        // Reddit — high signal subreddits
         if (/^Reddit r\/(forhire|freelance_forhire|for_hire|hiring|DeveloperJobs|remotejobs)/i.test(src)) return 65;
-        if (/^Reddit r\/(startups|startup|SaaS|Entrepreneur|smallbusiness|small_business|indiehackers)/i.test(src)) return 45;
-        if (/^Reddit r\/(n8n|automation|nocode|AI_Agents|aiagents|openai)/i.test(src)) return 50;
+        if (/^Reddit r\/(n8n|automation|nocode|AI_Agents|aiagents|openai)/i.test(src)) return 52;
+        if (/^Reddit r\/(startups|startup|SaaS|Entrepreneur|smallbusiness|indiehackers)/i.test(src)) return 45;
         if (/^Reddit/i.test(src))                                                   return  30;
         return 40;
     }

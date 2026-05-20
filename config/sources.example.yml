@@ -37,8 +37,42 @@ sources:
     enabled: true
     # Remotive.com free public API — no auth, no API key
     # Covers software-dev, devops-sysadmin, and product categories
-    # https://remotive.com/api/remote-jobs
     posts_per_scan: 15
+
+  devto:
+    enabled: true
+    posts_per_tag: 8
+    posts_per_scan: 30
+    tags: [hiring, webdev, javascript, react, node, ai, automation, showdev]
+
+  # ── Premium sources — require credentials in .env ────────────────────────────
+
+  upwork:
+    enabled: false              # enable after setting UPWORK_RSS_URL in .env
+    posts_per_scan: 20
+    # UPWORK_RSS_URL in .env: your personalized Upwork RSS search URL
+    # Get it: log in → search jobs → copy RSS URL from browser (includes security token)
+
+  freelancer:
+    enabled: false              # works without token; FREELANCER_OAUTH_TOKEN improves quality
+    posts_per_scan: 20
+    search_query: "react node javascript automation ai discord bot saas"
+    # FREELANCER_OAUTH_TOKEN in .env (optional): developers.freelancer.com → Create App
+
+  peopleperhour:
+    enabled: false              # no auth needed — UK/EU focused freelance platform
+    posts_per_scan: 20
+
+  websearch:
+    enabled: false              # set true after adding BRAVE_SEARCH_API_KEY or SERPER_API_KEY
+    results_per_query: 5
+    max_queries: 5
+    queries:
+      - '"looking for" developer freelance OR contractor "automation" OR "n8n" OR "AI agent"'
+      - '"need someone" OR "need a developer" "react" OR "nextjs" OR "node" build'
+      - '"hire" freelance developer "discord bot" OR "SaaS" OR "MVP" budget'
+      - '"help me build" OR "help building" automation OR API OR workflow developer'
+      - '"project" developer freelance "budget" OR "rate" react OR node'
 
   twitter:
     enabled: false

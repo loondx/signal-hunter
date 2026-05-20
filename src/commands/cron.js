@@ -4,7 +4,7 @@ import { spawn }                                                     from 'child
 import { existsSync, readFileSync, unlinkSync, mkdirSync, openSync } from 'fs';
 import { join }                                                      from 'path';
 import pc                                                            from 'picocolors';
-import { loadEnv }                                                   from '../../utils/config.js';
+import { loadEnv, loadProfile }                                       from '../../utils/config.js';
 import { PKG_DIR, DATA_DIR }                                         from '../../utils/paths.js';
 import { argValue }                                                  from '../../utils/args.js';
 
@@ -24,8 +24,12 @@ function readPid() {
 
 // ── Commands ──────────────────────────────────────────────────────────────────
 
+function profileInterval() {
+    try { return loadProfile()?.automation?.cron_interval || null; } catch { return null; }
+}
+
 function cmdStart(args) {
-    const interval   = argValue(args, '--interval') || '30m';
+    const interval   = argValue(args, '--interval') || profileInterval() || '30m';
     const foreground = args.includes('--foreground');
 
     const existingPid = readPid();
@@ -120,7 +124,7 @@ function cmdLogs() {
 }
 
 function cmdInstall(args) {
-    const interval = argValue(args, '--interval') || '30m';
+    const interval = argValue(args, '--interval') || profileInterval() || '30m';
     const absPath  = DATA_DIR;
 
     const mins  = interval.match(/^(\d+)m$/);
@@ -189,7 +193,7 @@ switch (subcmd) {
   ${pc.bold('signal-hunter cron')} — built-in scheduler
 
   ${pc.bold('Commands:')}
-    ${pc.cyan('cron start')}                    Start background daemon (every 30m)
+    ${pc.cyan('cron start')}                    Start background daemon (uses interval from profile.yml)
     ${pc.cyan('cron start --interval 1h')}      Custom interval: 30m, 1h, 6h, 1d
     ${pc.cyan('cron start --foreground')}       Foreground mode (for systemd/Docker)
     ${pc.cyan('cron stop')}                     Stop the daemon
