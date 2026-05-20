@@ -10,8 +10,10 @@ import { notifyDiscord }                                             from '../..
 import { fetchHackerNews }                                           from '../../sources/hackernews.js';
 import { fetchReddit }                                               from '../../sources/reddit.js';
 import { fetchRemoteOk }                                             from '../../sources/remoteok.js';
+import { fetchRemotive }                                             from '../../sources/remotive.js';
 import { fetchCustomUrl }                                            from '../../sources/custom.js';
 import { fetchTwitter }                                              from '../../sources/twitter.js';
+import { getLearningContext }                                        from '../../agents/learner.js';
 import { logger }                                                    from '../../utils/logger.js';
 import { argValue }                                                  from '../../utils/args.js';
 
@@ -23,6 +25,7 @@ const SOURCE_FETCHERS = {
     hackernews: (profile, cfg) => fetchHackerNews(profile, cfg),
     reddit:     (profile, cfg) => fetchReddit(profile, cfg),
     remoteok:   (profile, cfg) => fetchRemoteOk(profile, cfg),
+    remotive:   (profile, cfg) => fetchRemotive(profile, cfg),
     twitter:    (profile, cfg) => fetchTwitter(profile, cfg),
 };
 
@@ -36,10 +39,11 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
         );
     }
 
-    const profile       = loadProfile();
-    const businesses    = loadBusinesses();
-    const sourcesConfig = loadSourcesConfig();
-    const seenIds       = loadSeenIds();
+    const profile        = loadProfile();
+    const businesses     = loadBusinesses();
+    const sourcesConfig  = loadSourcesConfig();
+    const seenIds        = loadSeenIds();
+    const learningCtx    = getLearningContext();
 
     const enabledSources = sourceFilter
         ? [sourceFilter]
@@ -152,7 +156,7 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
 
         if (!quiet) process.stdout.write(`${prefix} ${pc.dim(candidate.source.substring(0, 25).padEnd(25))} qualifying...`);
 
-        const result = await qualify(candidate, profile, businesses);
+        const result = await qualify(candidate, profile, businesses, learningCtx);
         const signal = { ...candidate, ...result };
 
         if (!quiet) {

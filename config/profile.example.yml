@@ -54,15 +54,24 @@ sources:
     - hackernews
     - reddit
     - remoteok
+    - remotive       # free Remotive.com API — no auth needed
+    - custom         # enables custom_urls from sources.yml
 
   reddit:
     subreddits:
       - forhire
+      - freelance_forhire
+      - for_hire
+      - hiring
       - freelance
       - webdev
       - startups
-      - entrepreneur
+      - SaaS
+      - Entrepreneur
       - smallbusiness
+      - n8n
+      - automation
+      - nocode
 
 # ── Notifications ─────────────────────────────────────────────────────────────
 # These are also set via .env — profile.yml acts as a reference.

@@ -33,6 +33,13 @@ sources:
     # https://remoteok.com/api
     posts_per_scan: 20
 
+  remotive:
+    enabled: true
+    # Remotive.com free public API — no auth, no API key
+    # Covers software-dev, devops-sysadmin, and product categories
+    # https://remotive.com/api/remote-jobs
+    posts_per_scan: 15
+
   twitter:
     enabled: false
     # Requires TWITTER_BEARER_TOKEN in .env

@@ -6,9 +6,10 @@ import pc               from 'picocolors';
 import { execSync }     from 'child_process';
 import { writeFileSync } from 'fs';
 import { join }         from 'path';
-import { loadEnv }      from '../../utils/config.js';
-import { loadSignals }  from '../../utils/store.js';
-import { DATA_DIR }     from '../../utils/paths.js';
+import { loadEnv }        from '../../utils/config.js';
+import { loadSignals }    from '../../utils/store.js';
+import { DATA_DIR }       from '../../utils/paths.js';
+import { recordFeedback } from '../../agents/learner.js';
 
 loadEnv();
 
@@ -80,7 +81,8 @@ function cmdReply(num) {
 
     const updated = updateSignalStatus(num, 'replied');
     if (updated) {
-        console.log(`  ${pc.green('✓')}  Signal #${num} marked as ${pc.green('replied')}`);
+        recordFeedback(updated, 'replied');
+        console.log(`  ${pc.green('✓')}  Signal #${num} marked as ${pc.green('replied')}  ${pc.dim('(learning updated)')}`);
     }
     console.log('');
 }
@@ -93,6 +95,7 @@ function cmdSkip(num) {
     }
     const updated = updateSignalStatus(num, 'skipped');
     if (updated) {
+        recordFeedback(updated, 'skipped');
         console.log(`\n  ${pc.dim('✓')}  Signal #${num} (${s.source}) marked as ${pc.dim('skipped')}\n`);
     }
 }

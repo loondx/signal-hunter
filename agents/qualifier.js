@@ -45,7 +45,7 @@ export function preFilter(signal, profile) {
 }
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
-function buildPrompt(signal, profile, businesses) {
+function buildPrompt(signal, profile, businesses, learningContext) {
     const bizSection = businesses?.length
         ? `\nPARTNER BUSINESSES — route to the best match:\n` +
           businesses.map(b =>
@@ -55,14 +55,16 @@ function buildPrompt(signal, profile, businesses) {
           ).join('\n\n')
         : '';
 
-    return `You are a buying signal detector for service businesses. Analyze this internet post and score it.
+    const learnSection = learningContext ? `\n${learningContext}\n` : '';
 
-PRIMARY BUSINESS:
-What they offer: ${profile.services.what_you_do}
+    return `You are a buying signal detector for a freelance software engineer. Score this internet post.
+
+FREELANCER PROFILE:
+Services: ${profile.services.what_you_do}
 Ideal client signals: ${profile.services.buying_signals}
 Red flags — reject if any present: ${(profile.services.red_flags || []).join(', ') || 'none'}
-Minimum budget: ${profile.services.budget_min || 'not specified'}
-${bizSection}
+Minimum budget: ${profile.services.budget_min || '$200'}
+${bizSection}${learnSection}
 
 SIGNAL:
 Source: ${signal.source}
@@ -73,27 +75,50 @@ Content:
 ${signal.text}
 """
 
-Score 0-100:
-90-100 → someone actively looking to hire a freelancer/contractor, clear fit, respond today
-70-89  → strong buying intent, good fit, respond soon
-50-69  → moderate fit, worth investigating
-30-49  → weak or unclear signal, low priority
-0-29   → full-time employment ad, large company, or no relevance at all
+SCORING RUBRIC (be strict — most posts are discussions, not client leads):
+90-100 → HIRE INTENT: explicitly looking to hire/contract a developer, budget mentioned, clear scope
+         Examples: "Looking for React dev, budget $1500", "Need contractor for 3-week project"
+70-89  → STRONG LEAD: strong buying intent, may not say "hire" explicitly but clearly needs paid help
+         Examples: "Anyone build this for me?", "Need someone to set this up", custom API/bot/automation needed
+50-69  → POSSIBLE LEAD: pain point clearly stated, might hire if approached right
+         Examples: "Struggling with X workflow", company problem, startup founder asking how to build Y
+30-49  → WEAK: general question, want to DIY, or very vague
+         Examples: "How do I do X?", "What tool should I use?", "Has anyone tried Y?"
+0-29   → NO LEAD: full-time employment, student question, pure discussion, large enterprise post
+
+FREELANCE PLATFORM BONUS:
+- Posts from RemoteOK, Remotive = likely paid work, start score at 55+
+- Posts from r/forhire, r/freelance_forhire, r/for_hire, r/hiring = likely paid work, start score at 60+
+- HackerNews "Who is Hiring?" = real jobs, score based on fit
+
+CRITICAL SCORING RULES:
+- "How do I..." or "What is..." with no budget/hire intent → max score 35
+- Person asking community for free advice → max score 40
+- Full-time job at a company (not freelance) → max score 25
+- Urgency words (urgent, asap, deadline, tonight, this week) → add 10 points
+- Budget explicitly mentioned → add 15 points
+- Small team / solo founder / startup → add 10 points (easier to close)
 
 IMPORTANT — is_red_flag rules (strict):
-- Set is_red_flag TRUE only if the content EXPLICITLY contains one of these terms: ${(profile.services.red_flags || []).join(', ')}
-- Set is_red_flag FALSE for everything else, even if the score is 0
-- Full-time job ads are NOT red flags — just score them 0-20
+- Set is_red_flag TRUE only if the content EXPLICITLY contains one of these: ${(profile.services.red_flags || []).join(', ')}
+- Full-time job ads are NOT red flags — just score 0-25
+
+OUTREACH_ANGLE must be a ready-to-send 2-3 sentence message:
+- Start with what specifically caught your eye in THEIR post
+- Connect it to a result you can deliver (not just "I can help")
+- End with a low-friction next step ("Want me to sketch the architecture?" / "Happy to do a free 15-min scope call")
+- Tone: peer-to-peer, not salesy. Be specific about their exact problem.
 
 Return ONLY valid JSON — no markdown, no extra text:
 {
   "score": 0,
   "is_red_flag": false,
   "business_match": ${businesses?.length ? '"matching business id or null"' : 'null'},
-  "reasoning": "one sentence why this score",
-  "budget_hint": "extracted budget info or null",
+  "reasoning": "one sentence why this score — be specific about what hiring signal (or lack of) drove this",
+  "budget_hint": "extracted budget/rate info or null",
   "urgency": "urgent|normal|low",
-  "outreach_angle": "2-3 sentences: how to open this specific conversation"
+  "action": "dm|comment|apply|skip",
+  "outreach_angle": "ready-to-send 2-3 sentence opener specific to this post"
 }`;
 }
 
@@ -179,10 +204,10 @@ function parseJson(raw) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export async function qualify(signal, profile, businesses) {
+export async function qualify(signal, profile, businesses, learningContext = null) {
     const provider = profile.llm?.provider || 'gemini';
     const model    = profile.llm?.model    || 'gemini-flash-latest';
-    const prompt   = buildPrompt(signal, profile, businesses);
+    const prompt   = buildPrompt(signal, profile, businesses, learningContext);
 
     try {
         let raw;

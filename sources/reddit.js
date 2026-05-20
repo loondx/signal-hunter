@@ -57,7 +57,8 @@ function parseAtomFeed(xml, sub) {
 
         const published = extractTag(block, 'published') || extractTag(block, 'updated');
         const linkMatch = /<link[^>]+href="([^"]+)"/i.exec(block);
-        const url       = linkMatch ? linkMatch[1] : `https://www.reddit.com/r/${sub}/comments/${postId}/`;
+        const rawUrl    = linkMatch ? linkMatch[1] : `https://www.reddit.com/r/${sub}/comments/${postId}/`;
+        const url       = rawUrl.replace('//old.reddit.com/', '//www.reddit.com/');
 
         const text = `${title}\n\n${content}`.trim();
         if (text.length < 40) continue;

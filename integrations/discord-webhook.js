@@ -3,6 +3,28 @@ import { logger } from '../utils/logger.js';
 const SCORE_COLORS  = { high: 0x00C853, mid: 0xFF9800, low: 0xEF5350 };
 const URGENCY_ICONS = { urgent: '🔥', normal: '📌', low: '·' };
 
+const SOURCE_ICONS = {
+    'Reddit':       '🔴',
+    'Hacker News':  '🟠',
+    'Remote OK':    '💻',
+    'Remotive':     '💼',
+    'Twitter':      '🐦',
+    'Custom':       '🌐',
+};
+
+function sourceIcon(source) {
+    for (const [key, icon] of Object.entries(SOURCE_ICONS)) {
+        if (source?.includes(key)) return icon;
+    }
+    return '📡';
+}
+
+function truncate(text, max) {
+    if (!text) return '';
+    const clean = text.replace(/\n+/g, ' ').trim();
+    return clean.length > max ? clean.substring(0, max) + '…' : clean;
+}
+
 export async function notifyDiscord(signal, webhookUrl) {
     if (!webhookUrl) return false;
 
@@ -11,39 +33,61 @@ export async function notifyDiscord(signal, webhookUrl) {
         signal.score >= 60 ? SCORE_COLORS.mid  :
         SCORE_COLORS.low;
 
+    const urgIcon  = URGENCY_ICONS[signal.urgency] || '📌';
+    const srcIcon  = sourceIcon(signal.source);
+    const action   = signal.action === 'apply' ? 'Apply now' : signal.action === 'dm' ? 'Send DM' : 'Reply';
+
+    // Description: post snippet
+    const snippet = truncate(signal.text, 400);
+
     const fields = [
         {
-            name:   '📝 Signal',
-            value:  (signal.text || '').substring(0, 300) + ((signal.text?.length || 0) > 300 ? '...' : ''),
+            name:   `${srcIcon} ${signal.source}  ·  by ${signal.author}`,
+            value:  snippet || '_(no content)_',
             inline: false,
         },
         {
-            name:   '💡 Reasoning',
+            name:   '💡 Why This Signal',
             value:  signal.reasoning || 'N/A',
-            inline: false,
-        },
-        {
-            name:   '✉️ Outreach Angle',
-            value:  signal.outreach_angle || 'N/A',
             inline: false,
         },
     ];
 
-    if (signal.budget_hint) {
-        fields.push({ name: '💰 Budget Hint', value: signal.budget_hint, inline: true });
-    }
-    if (signal.business_match) {
-        fields.push({ name: '🏢 Routed To', value: signal.business_match, inline: true });
+    // Outreach angle as a code block — easy to select and copy
+    if (signal.outreach_angle) {
+        fields.push({
+            name:   `✉️ ${action} — Copy & Send`,
+            value:  `\`\`\`\n${signal.outreach_angle}\n\`\`\``,
+            inline: false,
+        });
     }
 
+    // Budget and urgency on same row
+    if (signal.budget_hint) {
+        fields.push({ name: '💰 Budget', value: signal.budget_hint, inline: true });
+    }
+    if (signal.urgency && signal.urgency !== 'low') {
+        fields.push({ name: '⚡ Urgency', value: signal.urgency.toUpperCase(), inline: true });
+    }
+    if (signal.business_match) {
+        fields.push({ name: '🏢 Route To', value: signal.business_match, inline: true });
+    }
+
+    // Always show the direct link as a field — not just in the embed title
+    fields.push({
+        name:   '🔗 Open Post',
+        value:  `[${truncate(signal.url, 80)}](${signal.url})`,
+        inline: false,
+    });
+
     const embed = {
-        title:       `${URGENCY_ICONS[signal.urgency] || '📌'} Signal #${signal.num} — Score ${signal.score}/100`,
+        title:     `${urgIcon} Signal #${signal.num} — Score ${signal.score}/100`,
         color,
-        description: `**Source:** ${signal.source}  |  **Author:** ${signal.author}`,
-        url:         signal.url,
+        url:       signal.url,
+        description: `**${signal.score >= 80 ? 'HOT LEAD' : signal.score >= 70 ? 'Strong Lead' : 'Lead'} →** respond ${signal.urgency === 'urgent' ? 'TODAY' : 'soon'}`,
         fields,
-        footer:      { text: `Signal Hunter • ${signal.urgency || 'normal'} urgency` },
-        timestamp:   new Date().toISOString(),
+        footer:    { text: `Signal Hunter  ·  ${signal.urgency || 'normal'} urgency  ·  ${new Date().toLocaleDateString()}` },
+        timestamp: new Date().toISOString(),
     };
 
     try {
