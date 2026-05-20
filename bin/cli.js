@@ -12,6 +12,7 @@ const COMMANDS = {
     list:     'src/commands/list.js',
     insights: 'src/commands/insights.js',
     cron:     'src/commands/cron.js',
+    auth:     'src/commands/auth.js',
     reply:    'src/commands/manage.js',
     skip:     'src/commands/manage.js',
     open:     'src/commands/manage.js',
@@ -19,7 +20,7 @@ const COMMANDS = {
 };
 
 // These commands run even without a profile.yml
-const NO_PROFILE_NEEDED = new Set(['setup', 'doctor', 'cron', 'update', 'version', '-v', '--version']);
+const NO_PROFILE_NEEDED = new Set(['setup', 'doctor', 'cron', 'update', 'auth', 'version', '-v', '--version']);
 
 const HELP = `
   ${pc.bold(pc.cyan('signal-hunter'))} — AI agent that hunts buying signals for your business
@@ -33,6 +34,7 @@ const HELP = `
     ${pc.cyan('scan')}                     Scan all sources for new buying signals
     ${pc.cyan('list')}                     View your signal pipeline
     ${pc.cyan('insights')}                 Source performance, score stats, recommendations
+    ${pc.cyan('auth')} ${pc.dim('<platform>')}        Connect paid platforms: upwork, freelancer
 
   ${pc.bold('Signal management:')}
     ${pc.cyan('reply')} ${pc.dim('<num>')}             Show full signal + outreach angle, mark replied

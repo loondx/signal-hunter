@@ -1,102 +1,177 @@
-# Signal Hunter — Source Configuration
+# Signal Hunter — Source Configuration Example
 # ─────────────────────────────────────────────────────────────────────────────
-# Advanced config — your profile.yml handles the basics.
-# Copy this to config/sources.yml to customize individual sources.
+# Copy to config/sources.yml and customize.
+# Add any number of sources — no code changes needed.
 #
-# IMPORTANT: The AI understands INTENT, not keywords.
-# You don't need to list every possible keyword — describe the problem
-# your clients have and the AI handles the matching.
+# Provider TYPES:
+#   hackernews   Built-in: HN Firebase + Algolia search
+#   reddit       Built-in: Reddit Atom RSS feeds
+#   remoteok     Built-in: RemoteOK.com public API
+#   remotive     Built-in: Remotive.com public API
+#   devto        Built-in: Dev.to Forem public API
+#   upwork       Built-in: Upwork OAuth2 GraphQL (signal-hunter auth upwork)
+#   freelancer   Built-in: Freelancer.com API (signal-hunter auth freelancer)
+#   websearch    Built-in: Web search via Serper.dev or Brave Search
+#   twitter      Built-in: Twitter/X search (TWITTER_BEARER_TOKEN)
+#   rss          Generic:  Any RSS or Atom feed URL
+#   json_api     Generic:  Any JSON API with field mapping
+#   jina         Generic:  Any webpage via Jina.ai reader (free)
 # ─────────────────────────────────────────────────────────────────────────────
 
-sources:
+# ── Free sources — no auth needed ────────────────────────────────────────────
 
-  hackernews:
-    enabled: true
-    # Monthly "Who is Hiring?" thread — very high signal for tech services
-    monthly_hiring_thread: true
-    # Scan recent Ask HN / comments for buying intent
-    scan_comments: false          # set true for more volume (more noise too)
+hackernews:
+  type: hackernews
+  enabled: true
+  config:
+    monthly_hiring_thread: true   # always scans "Who is Hiring?" thread
+    scan_comments: false          # true = more volume, more noise
     posts_per_scan: 30
 
-  reddit:
-    enabled: true
-    scan_mode: new                # new | hot | top
-    posts_per_scan: 10            # per subreddit per run
-    # Subreddits come from profile.yml — add extras here
-    extra_subreddits: []
-    #   - consulting
-    #   - digitalnomad
+reddit:
+  type: reddit
+  enabled: true
+  config:
+    posts_per_scan: 15            # per subreddit per run
+    # Subreddits are set in profile.yml under sources.reddit.subreddits
 
-  remoteok:
-    enabled: true
-    # Remote OK has a completely open JSON API — zero cost, no auth needed
-    # https://remoteok.com/api
-    posts_per_scan: 20
+remoteok:
+  type: remoteok
+  enabled: true
+  config:
+    posts_per_scan: 25
 
-  remotive:
-    enabled: true
-    # Remotive.com free public API — no auth, no API key
-    # Covers software-dev, devops-sysadmin, and product categories
-    posts_per_scan: 15
+remotive:
+  type: remotive
+  enabled: true
+  config:
+    posts_per_scan: 20            # covers software-dev, devops, product
 
-  devto:
-    enabled: true
+devto:
+  type: devto
+  enabled: true
+  config:
+    tags: [hiring, webdev, javascript, react, node, ai, automation, showdev]
     posts_per_tag: 8
     posts_per_scan: 30
-    tags: [hiring, webdev, javascript, react, node, ai, automation, showdev]
 
-  # ── Premium sources — require credentials in .env ────────────────────────────
+# ── Premium sources — run `signal-hunter auth <platform>` to connect ─────────
 
-  upwork:
-    enabled: false              # enable after setting UPWORK_RSS_URL in .env
-    posts_per_scan: 20
-    # UPWORK_RSS_URL in .env: your personalized Upwork RSS search URL
-    # Get it: log in → search jobs → copy RSS URL from browser (includes security token)
-
-  freelancer:
-    enabled: false              # works without token; FREELANCER_OAUTH_TOKEN improves quality
-    posts_per_scan: 20
-    search_query: "react node javascript automation ai discord bot saas"
-    # FREELANCER_OAUTH_TOKEN in .env (optional): developers.freelancer.com → Create App
-
-  peopleperhour:
-    enabled: false              # no auth needed — UK/EU focused freelance platform
+upwork:
+  type: upwork
+  enabled: false
+  # SETUP:
+  #   1. Register app: https://developers.upwork.com → API Keys → New App
+  #   2. Add UPWORK_CLIENT_ID + UPWORK_CLIENT_SECRET to .env
+  #   3. Run: signal-hunter auth upwork  (one-time browser OAuth2 flow)
+  config:
+    search_queries:
+      - "react developer automation freelance"
+      - "AI agent developer node.js"
+      - "discord bot developer"
+      - "SaaS MVP developer"
     posts_per_scan: 20
 
-  websearch:
-    enabled: false              # set true after adding BRAVE_SEARCH_API_KEY or SERPER_API_KEY
+freelancer:
+  type: freelancer
+  enabled: false
+  # SETUP:
+  #   Run: signal-hunter auth freelancer
+  #   Gets free token at https://developers.freelancer.com
+  # Skill IDs (from Freelancer taxonomy):
+  #   JavaScript=3, Python=17, Node.js=31, React.js=43, API=1049,
+  #   Machine Learning=1392, Automation=1043, ChatGPT=1124, OpenAI=1371
+  #   TypeScript=1756, AWS=1381, Discord=1584
+  config:
+    skill_ids: [3, 17, 31, 43, 1049, 1392, 1043]
+    language: en
+    posts_per_scan: 20
+
+# ── Generic RSS — add any job board ─────────────────────────────────────────
+# Duplicate this block to add multiple RSS sources.
+
+# weworkremotely:
+#   type: rss
+#   enabled: false
+#   config:
+#     url: "https://weworkremotely.com/categories/remote-programming-jobs.rss"
+#     label: "We Work Remotely"
+#     posts_per_scan: 20
+
+# nodesk_jobs:
+#   type: rss
+#   enabled: false
+#   config:
+#     url: "https://nodesk.co/remote-jobs/rss.xml"
+#     label: "Nodesk Remote Jobs"
+#     posts_per_scan: 15
+
+# ── Generic RSS with env-based URL (e.g. Upwork personalized RSS if available) ──
+# upwork_rss:
+#   type: rss
+#   enabled: false
+#   config:
+#     url_env: UPWORK_RSS_URL       # paste your Upwork search URL in .env
+#     label: "Upwork RSS"
+#     posts_per_scan: 20
+
+# ── Generic JSON API — add any JSON endpoint ─────────────────────────────────
+# Field mapping — point to any keys in the response.
+
+# my_custom_api:
+#   type: json_api
+#   enabled: false
+#   config:
+#     url: "https://api.example.com/jobs"
+#     auth_header_env: "MY_API_KEY"      # adds Authorization: Bearer <value>
+#     response_path: "data.jobs"         # dot-path to the array in response
+#     id_field: "id"
+#     text_fields: ["title", "description", "requirements"]
+#     url_field: "apply_url"
+#     author_field: "company.name"
+#     date_field: "published_at"
+#     label: "My Job Board"
+#     posts_per_scan: 20
+
+# ── Generic webpage reader (via Jina.ai, free) ───────────────────────────────
+# indiehackers:
+#   type: jina
+#   enabled: false
+#   config:
+#     url: "https://www.indiehackers.com/jobs"
+#     label: "IndieHackers Jobs"
+
+# ── Web Search (Serper.dev — free 2500 queries at serper.dev) ────────────────
+websearch:
+  type: websearch
+  enabled: false
+  # SETUP: Get free key at https://serper.dev → add SERPER_API_KEY to .env
+  # Note: Brave Search free tier ended Feb 2026 — Serper.dev is recommended
+  config:
     results_per_query: 5
     max_queries: 5
     queries:
-      - '"looking for" developer freelance OR contractor "automation" OR "n8n" OR "AI agent"'
-      - '"need someone" OR "need a developer" "react" OR "nextjs" OR "node" build'
+      - '"looking for" developer freelance OR contractor "automation" OR "AI agent"'
+      - '"need someone" OR "need a developer" "react" OR "nextjs" OR "node"'
       - '"hire" freelance developer "discord bot" OR "SaaS" OR "MVP" budget'
-      - '"help me build" OR "help building" automation OR API OR workflow developer'
-      - '"project" developer freelance "budget" OR "rate" react OR node'
+      - '"help me build" automation OR API OR workflow developer'
+      - '"project" developer freelance "budget" react OR node'
 
-  twitter:
-    enabled: false
-    # Requires TWITTER_BEARER_TOKEN in .env
-    # Free tier: 500k tweet reads/month — more than enough
+# ── Twitter / X ──────────────────────────────────────────────────────────────
+twitter:
+  type: twitter
+  enabled: false
+  # SETUP: Get TWITTER_BEARER_TOKEN at developer.x.com → Create App
+  config:
     queries:
-      # These are passed directly to Twitter's search API
-      # The AI re-evaluates the results — these are broad nets
-      - "looking for developer freelance"
-      - "need automation help"
-      - "zapier alternative"
-      - "n8n help"
-      - "discord bot needed"
+      - "looking for AI automation developer freelance"
+      - "need n8n developer contractor"
+      - "need discord bot developer"
+      - "hire AI agent developer"
+      - "need React developer freelance"
     posts_per_scan: 20
 
-  custom_urls:
-    enabled: false
-    # Monitor any webpage — uses Jina.ai reader (free, no auth, no API key)
-    # Good for: niche forums, Slack community job boards, curated lists
-    # Usage: prepends https://r.jina.ai/ to extract clean markdown from any URL
-    urls:
-      - url: "https://weworkremotely.com/categories/remote-full-stack-programming-jobs"
-        label: "We Work Remotely"
-        scan_interval: 60         # minutes between checks
-      - url: "https://remotive.com/remote-jobs/software-dev"
-        label: "Remotive Dev Jobs"
-        scan_interval: 120
+# ── Global scan settings ─────────────────────────────────────────────────────
+# Candidates are sorted by source quality before AI qualification.
+# Job boards (Upwork, Freelancer, Remotive) qualify first.
+max_candidates_per_scan: 30

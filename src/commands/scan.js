@@ -7,17 +7,7 @@ import { loadSeenIds, saveSeenIds, appendSignal, isFirstRun }       from '../../
 import { preFilter, qualify }                                        from '../../agents/qualifier.js';
 import { resolveNotification }                                       from '../../agents/router.js';
 import { notifyDiscord }                                             from '../../integrations/discord-webhook.js';
-import { fetchHackerNews }                                           from '../../sources/hackernews.js';
-import { fetchReddit }                                               from '../../sources/reddit.js';
-import { fetchRemoteOk }                                             from '../../sources/remoteok.js';
-import { fetchRemotive }                                             from '../../sources/remotive.js';
-import { fetchDevTo }                                               from '../../sources/devto.js';
-import { fetchWebSearch }                                           from '../../sources/websearch.js';
-import { fetchUpwork }                                             from '../../sources/upwork.js';
-import { fetchFreelancer }                                         from '../../sources/freelancer.js';
-import { fetchPeoplePerHour }                                      from '../../sources/peopleperhour.js';
-import { fetchCustomUrl }                                            from '../../sources/custom.js';
-import { fetchTwitter }                                              from '../../sources/twitter.js';
+import { dispatchSource }                                           from '../../sources/dispatch.js';
 import { getLearningContext }                                        from '../../agents/learner.js';
 import { logger }                                                    from '../../utils/logger.js';
 import { argValue }                                                  from '../../utils/args.js';
@@ -25,19 +15,6 @@ import { argValue }                                                  from '../..
 loadEnv();
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-const SOURCE_FETCHERS = {
-    hackernews: (profile, cfg) => fetchHackerNews(profile, cfg),
-    reddit:     (profile, cfg) => fetchReddit(profile, cfg),
-    remoteok:   (profile, cfg) => fetchRemoteOk(profile, cfg),
-    remotive:   (profile, cfg) => fetchRemotive(profile, cfg),
-    devto:         (profile, cfg) => fetchDevTo(profile, cfg),
-    websearch:     (profile, cfg) => fetchWebSearch(profile, cfg),
-    upwork:        (profile, cfg) => fetchUpwork(profile, cfg),
-    freelancer:    (profile, cfg) => fetchFreelancer(profile, cfg),
-    peopleperhour: (profile, cfg) => fetchPeoplePerHour(profile, cfg),
-    twitter:       (profile, cfg) => fetchTwitter(profile, cfg),
-};
 
 export async function runScan({ dryRun = false, sourceFilter = null, quiet = false, minScoreOverride = null } = {}) {
     if (!quiet) {
@@ -56,50 +33,50 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
     const seenIds        = loadSeenIds();
     const learningCtx    = getLearningContext();
 
-    const enabledSources = sourceFilter
-        ? [sourceFilter]
-        : (profile.sources?.enabled || ['hackernews', 'reddit', 'remoteok']);
+    // Build active source list: merge profile.sources.enabled with sources.yml entries
+    // sources.yml takes precedence — each entry has `type`, `enabled`, `config`
+    // profile.sources.enabled is the legacy list fallback
+    const sourcesYml    = sourcesConfig || {};
+    const legacyEnabled = profile.sources?.enabled || ['hackernews', 'reddit', 'remoteok'];
 
-    logger.info(`Scan started. Sources: [${enabledSources.join(', ')}]. Seen IDs: ${seenIds.size}`);
+    // Build ordered source entries: [{id, conf}]
+    let sourceEntries;
+    if (sourceFilter) {
+        // Single source mode — find it in sources.yml or fake a minimal entry
+        const conf = sourcesYml[sourceFilter] || { type: sourceFilter, enabled: true };
+        sourceEntries = [{ id: sourceFilter, conf }];
+    } else {
+        // All enabled sources — sources.yml entries + legacy list items not in sources.yml
+        const ymlIds = new Set(Object.keys(sourcesYml).filter(k =>
+            !['max_candidates_per_scan'].includes(k) &&
+            sourcesYml[k]?.enabled !== false
+        ));
+        const ymlEntries    = [...ymlIds].map(id => ({ id, conf: sourcesYml[id] }));
+        const legacyEntries = legacyEnabled
+            .filter(id => !ymlIds.has(id))
+            .map(id => ({ id, conf: { type: id, enabled: true } }));
+        sourceEntries = [...ymlEntries, ...legacyEntries];
+    }
 
-    // ── Fetch ──────────────────────────────────────────────────────────────
+    logger.info(`Scan started. Sources: [${sourceEntries.map(e => e.id).join(', ')}]. Seen IDs: ${seenIds.size}`);
+
+    // ── Fetch — dynamic dispatch ───────────────────────────────────────────
     const allCandidates = [];
 
-    for (const name of enabledSources) {
-        if (name === 'custom') {
-            const urls = sourcesConfig?.custom_urls?.urls || [];
-            for (const urlCfg of urls) {
-                const s = quiet ? { start: () => {}, stop: () => {} } : p.spinner();
-                s.start(`Fetching custom URL: ${urlCfg.label || urlCfg.url}...`);
-                const raw   = await fetchCustomUrl(urlCfg);
-                const fresh = raw.filter(r => !seenIds.has(r.id));
-                raw.forEach(r => seenIds.add(r.id));
-                s.stop(`custom: ${urlCfg.label} → ${raw.length} chunks, ${fresh.length} new`);
-                allCandidates.push(...fresh);
-            }
-            continue;
-        }
-
-        const fetcher = SOURCE_FETCHERS[name];
-        if (!fetcher) { !quiet && p.log.warn(`Unknown source "${name}" — skipping`); continue; }
-
-        if (name === 'twitter' && !process.env.TWITTER_BEARER_TOKEN) {
-            !quiet && p.log.warn(`Twitter skipped — TWITTER_BEARER_TOKEN not set in .env`);
-            !quiet && p.log.warn(`  Get one free at developer.x.com → Create App → Keys & Tokens`);
-            continue;
-        }
+    for (const { id, conf } of sourceEntries) {
+        if (conf?.enabled === false) continue;
 
         const s = quiet ? { start: () => {}, stop: () => {} } : p.spinner();
-        s.start(`Fetching ${name}...`);
+        s.start(`Fetching ${id}...`);
         try {
-            const raw   = await fetcher(profile, sourcesConfig);
+            const raw   = await dispatchSource(id, conf, profile, sourcesYml);
             const fresh = raw.filter(r => !seenIds.has(r.id));
             raw.forEach(r => seenIds.add(r.id));
-            s.stop(`${name} → ${raw.length} fetched, ${pc.cyan(String(fresh.length) + ' new')}`);
+            s.stop(`${id} → ${raw.length} fetched, ${pc.cyan(String(fresh.length) + ' new')}`);
             allCandidates.push(...fresh);
         } catch (err) {
-            s.stop(pc.red(`${name} → failed: ${err.message}`));
-            logger.error(`Source ${name} error: ${err.message}`);
+            s.stop(pc.red(`${id} → failed: ${err.message}`));
+            logger.error(`Source ${id} error: ${err.message}`);
         }
     }
 
