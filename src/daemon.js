@@ -11,6 +11,7 @@ import { loadEnv }  from '../utils/config.js';
 import { logger }   from '../utils/logger.js';
 import { PKG_DIR, DATA_DIR } from '../utils/paths.js';
 import { argValue } from '../utils/args.js';
+import { IS_WIN }   from '../utils/platform.js';
 
 loadEnv();
 
@@ -62,8 +63,12 @@ function shutdown() {
     try { if (existsSync(PID_FILE)) unlinkSync(PID_FILE); } catch {}
     process.exit(0);
 }
-process.on('SIGTERM', shutdown);
-process.on('SIGINT',  shutdown);
+process.on('SIGINT',  shutdown); // Ctrl+C — all platforms
+if (!IS_WIN) {
+    process.on('SIGTERM', shutdown); // graceful stop on Unix (not available on Windows)
+} else {
+    process.on('SIGBREAK', shutdown); // Windows Ctrl+Break equivalent
+}
 
 await spawnScan();
 cron.schedule(cronExpr, spawnScan);

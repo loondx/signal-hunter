@@ -3,8 +3,8 @@
 // signal-hunter skip  <num>  — mark as skipped
 // signal-hunter open  <num>  — open signal URL in browser
 import pc               from 'picocolors';
-import { execSync }     from 'child_process';
 import { writeFileSync } from 'fs';
+import { openBrowser }  from '../../utils/platform.js';
 import { join }         from 'path';
 import { loadEnv, loadProfile }   from '../../utils/config.js';
 import { loadSignals }             from '../../utils/store.js';
@@ -183,13 +183,7 @@ function cmdOpen(num) {
         return;
     }
     console.log(`\n  Opening: ${pc.cyan(s.url)}\n`);
-    const opener = process.platform === 'darwin' ? 'open' :
-                   process.platform === 'win32'  ? 'start' : 'xdg-open';
-    try {
-        execSync(`${opener} "${s.url}"`, { stdio: 'ignore' });
-    } catch {
-        console.log(`  ${pc.dim('(Could not open browser — copy the URL above)')}`);
-    }
+    openBrowser(s.url);
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────

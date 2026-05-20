@@ -8,7 +8,7 @@
 //   signal-hunter auth freelancer  — shows how to get a Freelancer.com token
 
 import { createServer }  from 'http';
-import { execSync }      from 'child_process';
+import { openBrowser as _openBrowser } from '../../utils/platform.js';
 import pc                from 'picocolors';
 import * as p            from '@clack/prompts';
 import { loadEnv }       from '../../utils/config.js';
@@ -180,11 +180,7 @@ async function authFreelancer() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function openBrowser(url) {
-    const cmd = process.platform === 'darwin' ? `open "${url}"` :
-                process.platform === 'win32'  ? `start "" "${url}"` : `xdg-open "${url}"`;
-    try { execSync(cmd, { stdio: 'ignore' }); } catch {}
-}
+function openBrowser(url) { _openBrowser(url); }
 
 function waitForCallback(port, path, paramName, timeoutMs = 120_000) {
     return new Promise((resolve, reject) => {

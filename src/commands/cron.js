@@ -4,17 +4,14 @@ import { spawn }                                                     from 'child
 import { existsSync, readFileSync, unlinkSync, mkdirSync, openSync } from 'fs';
 import { join }                                                      from 'path';
 import pc                                                            from 'picocolors';
-import { loadEnv, loadProfile }                                       from '../../utils/config.js';
+import { loadEnv, loadProfile }                                      from '../../utils/config.js';
 import { PKG_DIR, DATA_DIR }                                         from '../../utils/paths.js';
 import { argValue }                                                  from '../../utils/args.js';
+import { IS_WIN, isRunning, killProcess }                            from '../../utils/platform.js';
 
 loadEnv();
 
 const PID_FILE = join(DATA_DIR, 'data/cron.pid');
-
-function isRunning(pid) {
-    try { process.kill(pid, 0); return true; } catch { return false; }
-}
 
 function readPid() {
     if (!existsSync(PID_FILE)) return null;
@@ -22,11 +19,11 @@ function readPid() {
     return isNaN(pid) ? null : pid;
 }
 
-// ── Commands ──────────────────────────────────────────────────────────────────
-
 function profileInterval() {
     try { return loadProfile()?.automation?.cron_interval || null; } catch { return null; }
 }
+
+// ── Commands ──────────────────────────────────────────────────────────────────
 
 function cmdStart(args) {
     const interval   = argValue(args, '--interval') || profileInterval() || '30m';
@@ -51,20 +48,21 @@ function cmdStart(args) {
     // Background mode — detached process, logs to file
     mkdirSync(join(DATA_DIR, 'logs'), { recursive: true });
     const logFd = openSync(join(DATA_DIR, 'logs/cron.log'), 'a');
-    const child = spawn('node', [join(PKG_DIR, 'src/daemon.js'), '--interval', interval], {
-        cwd: PKG_DIR, stdio: ['ignore', logFd, logFd], detached: true,
-    });
+    const spawnOpts = IS_WIN
+        ? { cwd: PKG_DIR, stdio: ['ignore', logFd, logFd], detached: true, windowsHide: true }
+        : { cwd: PKG_DIR, stdio: ['ignore', logFd, logFd], detached: true };
+
+    const child = spawn('node', [join(PKG_DIR, 'src/daemon.js'), '--interval', interval], spawnOpts);
     child.unref();
 
-    // Brief wait for PID file to be written by daemon
     setTimeout(() => {
         const pid = readPid();
         if (pid && isRunning(pid)) {
             console.log(`\n  ${pc.green('✓')}  Daemon started (PID ${pid}, every ${interval})`);
-            console.log(`  Logs: ${pc.dim('logs/cron.log')}`);
+            console.log(`  Logs: ${pc.dim(join(DATA_DIR, 'logs/cron.log'))}`);
             console.log(`  Stop: ${pc.cyan('signal-hunter cron stop')}\n`);
         } else {
-            console.log(`\n  ${pc.red('✗')}  Daemon failed to start — check logs/cron.log\n`);
+            console.log(`\n  ${pc.red('✗')}  Daemon failed to start — check ${pc.dim('logs/cron.log')}\n`);
         }
     }, 1500);
 }
@@ -80,20 +78,22 @@ function cmdStop() {
         console.log(`\n  ${pc.dim(`PID ${pid} is not running (stale PID file removed).`)}\n`);
         return;
     }
-    try {
-        process.kill(pid, 'SIGTERM');
-        setTimeout(() => {
-            if (isRunning(pid)) {
-                process.kill(pid, 'SIGKILL');
-                console.log(`\n  ${pc.yellow('!')}  PID ${pid} force-killed (SIGKILL)\n`);
-            } else {
-                console.log(`\n  ${pc.green('✓')}  Daemon stopped (PID ${pid})\n`);
-            }
-            try { unlinkSync(PID_FILE); } catch {}
-        }, 1000);
-    } catch (err) {
-        console.log(`\n  ${pc.red('✗')}  Failed to stop PID ${pid}: ${err.message}\n`);
+
+    const killed = killProcess(pid, false);
+    if (!killed) {
+        console.log(`\n  ${pc.red('✗')}  Could not stop PID ${pid} — try manually\n`);
+        return;
     }
+
+    setTimeout(() => {
+        if (isRunning(pid)) {
+            killProcess(pid, true); // force-kill
+            console.log(`\n  ${pc.yellow('!')}  PID ${pid} force-killed\n`);
+        } else {
+            console.log(`\n  ${pc.green('✓')}  Daemon stopped (PID ${pid})\n`);
+        }
+        try { unlinkSync(PID_FILE); } catch {}
+    }, 1000);
 }
 
 function cmdStatus() {
@@ -126,33 +126,67 @@ function cmdLogs() {
 function cmdInstall(args) {
     const interval = argValue(args, '--interval') || profileInterval() || '30m';
     const absPath  = DATA_DIR;
+    const daemonJs = join(PKG_DIR, 'src', 'daemon.js').replace(/\\/g, '/');
 
-    const mins  = interval.match(/^(\d+)m$/);
-    const hours = interval.match(/^(\d+)h$/);
-    const cronExpr = mins  ? `*/${mins[1]} * * * *` :
-                     hours ? `0 */${hours[1]} * * *` : '*/30 * * * *';
+    const mins    = interval.match(/^(\d+)m$/);
+    const hours   = interval.match(/^(\d+)h$/);
+    const cronExp = mins  ? `*/${mins[1]} * * * *` :
+                    hours ? `0 */${hours[1]} * * *` : '*/30 * * * *';
 
-    console.log(`
-${pc.bold('  Choose your automation method:')}
+    if (IS_WIN) {
+        // Windows — Task Scheduler
+        const taskName  = 'SignalHunter';
+        const nodePath  = 'node';
+        const daemonArg = `${join(PKG_DIR, 'src', 'daemon.js')} --interval ${interval}`;
 
-  ${pc.bold(pc.cyan('1. Crontab'))} (simplest — works on any Linux/macOS)
-  ───────────────────────────────────────────
-  Run ${pc.cyan('crontab -e')} and add:
+        console.log(`
+${pc.bold('  Windows — Automation Options:')}
 
-  ${pc.green(`${cronExpr} cd ${absPath} && node scan.mjs >> logs/cron.log 2>&1`)}
+  ${pc.bold(pc.cyan('1. Task Scheduler'))} ${pc.dim('(runs on schedule, survives reboot)')}
+  ─────────────────────────────────────────────────
+  Open PowerShell as Administrator and run:
 
-  ${pc.bold(pc.cyan('2. PM2'))} ${pc.dim('(recommended for VPS — auto-restarts on crash)')}
-  ───────────────────────────────────────────
-  ${pc.green(`npm install -g pm2`)}
-  ${pc.green(`pm2 start ${absPath}/src/daemon.js --name signal-hunter -- --interval ${interval}`)}
-  ${pc.green(`pm2 save && pm2 startup`)}
+  ${pc.green(`$action  = New-ScheduledTaskAction -Execute 'node' -Argument '${daemonArg}'`)}
+  ${pc.green(`$trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes ${mins?.[1] || 30}) -Once -At (Get-Date)`)}
+  ${pc.green(`Register-ScheduledTask -TaskName '${taskName}' -Action $action -Trigger $trigger -RunLevel Highest`)}
 
-  ${pc.bold(pc.cyan('3. Built-in daemon'))} ${pc.dim('(background process, lost on reboot)')}
-  ───────────────────────────────────────────
+  To remove:  ${pc.green(`Unregister-ScheduledTask -TaskName '${taskName}' -Confirm:$false`)}
+
+  ${pc.bold(pc.cyan('2. Built-in daemon'))} ${pc.dim('(background process, lost on reboot)')}
+  ─────────────────────────────────────────────────
   ${pc.green(`signal-hunter cron start --interval ${interval}`)}
 
-  ${pc.bold(pc.cyan('4. Systemd'))} ${pc.dim('(production Linux — survives reboots)')}
-  ───────────────────────────────────────────
+  ${pc.bold(pc.cyan('3. PM2'))} ${pc.dim('(recommended — auto-restarts, survives reboot)')}
+  ─────────────────────────────────────────────────
+  ${pc.green(`npm install -g pm2`)}
+  ${pc.green(`pm2 start "${daemonJs}" --name signal-hunter -- --interval ${interval}`)}
+  ${pc.green(`pm2 save`)}
+  ${pc.green(`pm2 startup`)}  ${pc.dim('(follow the printed command to auto-start on boot)')}
+`);
+    } else {
+        // macOS / Linux
+        const user = process.env.USER || process.env.LOGNAME || 'user';
+        console.log(`
+${pc.bold('  macOS / Linux — Automation Options:')}
+
+  ${pc.bold(pc.cyan('1. Crontab'))} ${pc.dim('(simplest — works everywhere)')}
+  ─────────────────────────────────────────────────
+  Run ${pc.cyan('crontab -e')} and add:
+
+  ${pc.green(`${cronExp} SIGNAL_HUNTER_HOME="${absPath}" node "${daemonJs}" --interval ${interval} >> "${join(absPath,'logs','cron.log')}" 2>&1`)}
+
+  ${pc.bold(pc.cyan('2. PM2'))} ${pc.dim('(recommended — auto-restarts on crash)')}
+  ─────────────────────────────────────────────────
+  ${pc.green(`npm install -g pm2`)}
+  ${pc.green(`pm2 start "${daemonJs}" --name signal-hunter -- --interval ${interval}`)}
+  ${pc.green(`pm2 save && pm2 startup`)}  ${pc.dim('(follow the printed command)')}
+
+  ${pc.bold(pc.cyan('3. Built-in daemon'))} ${pc.dim('(background process, lost on reboot)')}
+  ─────────────────────────────────────────────────
+  ${pc.green(`signal-hunter cron start --interval ${interval}`)}
+
+  ${pc.bold(pc.cyan('4. Systemd'))} ${pc.dim('(Linux — production, survives reboots)')}
+  ─────────────────────────────────────────────────
   Save to ${pc.dim('/etc/systemd/system/signal-hunter.service')}:
 
 ${pc.dim(`  [Unit]
@@ -161,22 +195,49 @@ ${pc.dim(`  [Unit]
 
   [Service]
   Type=simple
-  User=${process.env.USER || 'ubuntu'}
-  WorkingDirectory=${absPath}
-  ExecStart=/usr/bin/node ${absPath}/src/daemon.js --interval ${interval}
+  User=${user}
+  Environment="SIGNAL_HUNTER_HOME=${absPath}"
+  ExecStart=/usr/bin/node ${daemonJs} --interval ${interval}
   Restart=on-failure
   RestartSec=10
 
   [Install]
   WantedBy=multi-user.target`)}
 
-  Then run: ${pc.green('sudo systemctl enable --now signal-hunter')}
+  Then: ${pc.green('sudo systemctl enable --now signal-hunter')}
+
+  ${pc.bold(pc.cyan('5. launchd'))} ${pc.dim('(macOS — survives reboots)')}
+  ─────────────────────────────────────────────────
+  Save to ${pc.dim(`~/Library/LaunchAgents/com.loondx.signal-hunter.plist`)}:
+
+${pc.dim(`  <?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+  <plist version="1.0"><dict>
+    <key>Label</key><string>com.loondx.signal-hunter</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/usr/local/bin/node</string>
+      <string>${daemonJs}</string>
+      <string>--interval</string><string>${interval}</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>SIGNAL_HUNTER_HOME</key><string>${absPath}</string>
+    </dict>
+    <key>StartInterval</key>
+    <integer>${mins ? parseInt(mins[1]) * 60 : hours ? parseInt(hours[1]) * 3600 : 1800}</integer>
+    <key>RunAtLoad</key><true/>
+    <key>StandardOutPath</key><string>${join(absPath,'logs','cron.log')}</string>
+    <key>StandardErrorPath</key><string>${join(absPath,'logs','cron.log')}</string>
+  </dict></plist>`)}
+
+  Then: ${pc.green(`launchctl load ~/Library/LaunchAgents/com.loondx.signal-hunter.plist`)}
 `);
+    }
 }
 
-// ── Route subcommand ──────────────────────────────────────────────────────────
-// When called via CLI:    process.argv = [node, cron.js, 'cron', 'start', ...]
-// When called directly:   process.argv = [node, cron.js, 'start', ...]
+// ── Route ─────────────────────────────────────────────────────────────────────
 const rawArgs = process.argv.slice(2);
 const args    = rawArgs[0] === 'cron' ? rawArgs.slice(1) : rawArgs;
 const subcmd  = args[0];
@@ -193,12 +254,12 @@ switch (subcmd) {
   ${pc.bold('signal-hunter cron')} — built-in scheduler
 
   ${pc.bold('Commands:')}
-    ${pc.cyan('cron start')}                    Start background daemon (uses interval from profile.yml)
-    ${pc.cyan('cron start --interval 1h')}      Custom interval: 30m, 1h, 6h, 1d
-    ${pc.cyan('cron start --foreground')}       Foreground mode (for systemd/Docker)
+    ${pc.cyan('cron start')}                    Start background daemon (reads interval from profile)
+    ${pc.cyan('cron start --interval 1h')}      Custom interval: 15m, 30m, 1h, 2h, 6h, 12h, 24h
+    ${pc.cyan('cron start --foreground')}       Foreground mode (for Docker / systemd)
     ${pc.cyan('cron stop')}                     Stop the daemon
-    ${pc.cyan('cron status')}                   Show if daemon is running
+    ${pc.cyan('cron status')}                   Check if daemon is running
     ${pc.cyan('cron logs')}                     Tail last 50 log lines
-    ${pc.cyan('cron install')}                  Print crontab/PM2/systemd configs
+    ${pc.cyan('cron install')}                  Print OS-specific automation setup (crontab / Task Scheduler / launchd)
 `);
 }
