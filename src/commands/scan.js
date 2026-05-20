@@ -142,27 +142,32 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
     const minScore       = minScoreOverride ?? profile.llm?.min_score ?? 60;
     const notifyMinScore = profile.notifications?.notify_min_score ?? 70;
 
-    // Interleave candidates by source so each source gets a fair share of the cap.
-    const bySource = new Map();
-    for (const c of preFiltered) {
-        const key = c.source;
-        if (!bySource.has(key)) bySource.set(key, []);
-        bySource.get(key).push(c);
-    }
-    const interleaved = [];
-    const queues = [...bySource.values()];
-    let i = 0;
-    while (interleaved.length < preFiltered.length) {
-        const q = queues[i % queues.length];
-        if (q.length) interleaved.push(q.shift());
-        i++;
-        if (queues.every(q => q.length === 0)) break;
+    // ── Source priority scoring ────────────────────────────────────────────
+    // BUG FIX: naive round-robin by source NAME lets Reddit's 30+ subreddits eat
+    // all AI quota. Instead, score each candidate by source quality and sort
+    // highest-signal sources first. Job boards (actual paid work) always qualify
+    // before discussion threads.
+    function sourcePriority(src) {
+        if (!src) return 10;
+        if (/^(Remote OK|Remotive)/i.test(src))                                    return 100; // paid job listings
+        if (/^Web Search/i.test(src))                                               return  95; // targeted internet search
+        if (/^Dev\.to/i.test(src))                                                  return  85; // dev community with #hiring
+        if (/^Hacker News Jobs/i.test(src))                                         return  90; // HN direct job posts
+        if (/^Hacker News/i.test(src))                                              return  75;
+        if (/We Work Remotely|IndieHackers/i.test(src))                             return  80;
+        if (/^Reddit r\/(forhire|freelance_forhire|for_hire|hiring|DeveloperJobs|remotejobs)/i.test(src)) return 65;
+        if (/^Reddit r\/(startups|startup|SaaS|Entrepreneur|smallbusiness|small_business|indiehackers)/i.test(src)) return 45;
+        if (/^Reddit r\/(n8n|automation|nocode|AI_Agents|aiagents|openai)/i.test(src)) return 50;
+        if (/^Reddit/i.test(src))                                                   return  30;
+        return 40;
     }
 
-    const maxCandidates = sourcesConfig?.max_candidates_per_scan ?? 15;
-    const toQualify     = interleaved.slice(0, maxCandidates);
+    const prioritized = [...preFiltered].sort((a, b) => sourcePriority(b.source) - sourcePriority(a.source));
+
+    const maxCandidates = sourcesConfig?.max_candidates_per_scan ?? 25;
+    const toQualify     = prioritized.slice(0, maxCandidates);
     if (!quiet && preFiltered.length > maxCandidates) {
-        p.log.warn(`Capping at ${maxCandidates} AI calls this run (${preFiltered.length} candidates). Adjust max_candidates_per_scan in config/sources.yml to change.`);
+        p.log.warn(`Capping at ${maxCandidates} AI calls this run (${preFiltered.length} candidates). Top sources: ${[...new Set(toQualify.slice(0,5).map(c => c.source))].join(', ')}`);
     }
 
     let saved = 0, notified = 0, redFlags = 0;

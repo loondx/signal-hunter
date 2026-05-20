@@ -3,19 +3,39 @@ const MAX_RETRIES = 1; // one retry on transient 429; daily quota won't recover 
 
 // ── Pre-filter — zero-cost string check before any AI call ───────────────────
 export function preFilter(signal, profile) {
-    const text = (signal.text || '').toLowerCase();
+    const text      = (signal.text || '').toLowerCase();
+    const textStart = text.substring(0, 400); // header zone — most telling
 
-    // 1. Red flag check — immediate reject
+    // 1. Red flag check — reject immediately
     for (const flag of (profile.services?.red_flags || [])) {
         if (text.includes(flag.toLowerCase())) {
             return { pass: false, reason: `red flag: "${flag}"` };
         }
     }
 
-    // 2. Very short posts — not enough context to keyword-filter reliably
+    // 2. Competitor filter — post is a JOB SEEKER (developer looking for work),
+    //    not a CLIENT looking to hire. Saves AI calls on hundreds of "[FOR HIRE]" posts.
+    const seekerSignals = [
+        '[for hire]', '(for hire)', 'for hire:', 'available for hire',
+        'looking for work', 'open to work', 'seeking opportunities', 'seeking projects',
+        'hire me', 'my portfolio', 'available immediately', 'available for new projects',
+        'dm for rates', 'dm me for rates', 'my rate is', 'my hourly rate',
+        'i am a freelance', "i'm a freelance", 'i am available', "i'm available",
+        'i am a full stack', "i'm a full stack", 'my skills include',
+        'years of experience working', 'check out my portfolio', 'my github profile',
+        'i specialize in', 'my services include', 'i offer services',
+        'taking on new clients', 'currently available',
+    ];
+    for (const phrase of seekerSignals) {
+        if (textStart.includes(phrase)) {
+            return { pass: false, reason: `job seeker post: "${phrase}"` };
+        }
+    }
+
+    // 3. Very short posts — not enough context to keyword-filter reliably
     if (text.split(/\s+/).length < 15) return { pass: true };
 
-    // 3. Keyword overlap — profile keywords + universal buying-intent words
+    // 4. Keyword overlap — profile keywords + universal buying-intent words
     const keywordSource = [
         profile.services?.what_you_do || '',
         profile.services?.buying_signals || '',
@@ -27,13 +47,14 @@ export function preFilter(signal, profile) {
         .filter(w => w.length > 4)
         .slice(0, 40);
 
-    // Universal buying-intent signals that apply to any service business
     const intentKeywords = [
         'hire', 'hiring', 'looking for', 'need help', 'need a', 'need someone',
         'budget', 'contractor', 'freelancer', 'freelance', 'developer', 'agency',
-        'build', 'integrate', 'automate', 'connect', 'implement', 'setup', 'create',
-        'help me', 'how do i', 'anyone know', 'recommendation', 'suggest',
+        'build', 'integrate', 'automate', 'connect', 'implement', 'deploy',
+        'help me', 'who can', 'recommend', 'anyone built', 'anyone know',
         'urgent', 'asap', 'project', 'payment', 'rate', 'quote', 'proposal',
+        'struggling with', 'our team needs', 'we need', 'we are looking',
+        'our company', 'startup', 'mvp', 'api', 'bot', 'workflow', 'automation',
     ];
 
     const allKeywords = [...profileKeywords, ...intentKeywords];
