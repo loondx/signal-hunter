@@ -10,6 +10,7 @@ const COMMANDS = {
     doctor:   'src/commands/doctor.js',
     scan:     'src/commands/scan.js',
     list:     'src/commands/list.js',
+    insights: 'src/commands/insights.js',
     cron:     'src/commands/cron.js',
     reply:    'src/commands/manage.js',
     skip:     'src/commands/manage.js',
@@ -31,6 +32,7 @@ const HELP = `
     ${pc.cyan('doctor --test-discord')}    Send a real test message to your Discord webhook
     ${pc.cyan('scan')}                     Scan all sources for new buying signals
     ${pc.cyan('list')}                     View your signal pipeline
+    ${pc.cyan('insights')}                 Source performance, score stats, recommendations
 
   ${pc.bold('Signal management:')}
     ${pc.cyan('reply')} ${pc.dim('<num>')}             Show full signal + outreach angle, mark replied
@@ -47,7 +49,7 @@ const HELP = `
     ${pc.cyan('version')}                  Show installed version
 
   ${pc.bold('Scan flags:')}
-    ${pc.cyan('--source')} ${pc.dim('<name>')}         One source: hackernews|reddit|remoteok|twitter
+    ${pc.cyan('--source')} ${pc.dim('<name>')}         One source: hackernews|reddit|remoteok|remotive|devto|websearch
     ${pc.cyan('--dry-run')}                Qualify without saving
     ${pc.cyan('--min-score')} ${pc.dim('<n>')}         Override score threshold for this run
 

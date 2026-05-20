@@ -3,7 +3,7 @@ import * as p   from '@clack/prompts';
 import pc        from 'picocolors';
 import { fileURLToPath } from 'url';
 import { loadEnv, loadProfile, loadBusinesses, loadSourcesConfig } from '../../utils/config.js';
-import { loadSeenIds, saveSeenIds, appendSignal }                   from '../../utils/store.js';
+import { loadSeenIds, saveSeenIds, appendSignal, isFirstRun }       from '../../utils/store.js';
 import { preFilter, qualify }                                        from '../../agents/qualifier.js';
 import { resolveNotification }                                       from '../../agents/router.js';
 import { notifyDiscord }                                             from '../../integrations/discord-webhook.js';
@@ -11,6 +11,8 @@ import { fetchHackerNews }                                           from '../..
 import { fetchReddit }                                               from '../../sources/reddit.js';
 import { fetchRemoteOk }                                             from '../../sources/remoteok.js';
 import { fetchRemotive }                                             from '../../sources/remotive.js';
+import { fetchDevTo }                                               from '../../sources/devto.js';
+import { fetchWebSearch }                                           from '../../sources/websearch.js';
 import { fetchCustomUrl }                                            from '../../sources/custom.js';
 import { fetchTwitter }                                              from '../../sources/twitter.js';
 import { getLearningContext }                                        from '../../agents/learner.js';
@@ -26,6 +28,8 @@ const SOURCE_FETCHERS = {
     reddit:     (profile, cfg) => fetchReddit(profile, cfg),
     remoteok:   (profile, cfg) => fetchRemoteOk(profile, cfg),
     remotive:   (profile, cfg) => fetchRemotive(profile, cfg),
+    devto:      (profile, cfg) => fetchDevTo(profile, cfg),
+    websearch:  (profile, cfg) => fetchWebSearch(profile, cfg),
     twitter:    (profile, cfg) => fetchTwitter(profile, cfg),
 };
 
@@ -42,6 +46,7 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
     const profile        = loadProfile();
     const businesses     = loadBusinesses();
     const sourcesConfig  = loadSourcesConfig();
+    const firstRun       = isFirstRun();
     const seenIds        = loadSeenIds();
     const learningCtx    = getLearningContext();
 
@@ -90,6 +95,21 @@ export async function runScan({ dryRun = false, sourceFilter = null, quiet = fal
             s.stop(pc.red(`${name} → failed: ${err.message}`));
             logger.error(`Source ${name} error: ${err.message}`);
         }
+    }
+
+    // ── First-run baseline: don't flood notifications on fresh install ────────
+    // Hermes-agent pattern: first run records all IDs as seen, no qualifying.
+    // Second run (30 min later) processes only truly new posts.
+    if (firstRun && !dryRun) {
+        saveSeenIds(seenIds);
+        const total = allCandidates.length;
+        logger.info(`First run: recorded ${seenIds.size} IDs as baseline. Next scan will find new signals.`);
+        !quiet && p.outro(
+            pc.yellow(`First run complete — ${total} posts recorded as baseline.`) +
+            `\n  Next scan (in ~30 min) will find genuinely new signals and notify you.` +
+            `\n  Run ${pc.cyan('signal-hunter cron start')} to automate this.`
+        );
+        return { saved: 0, notified: 0, total, firstRun: true };
     }
 
     if (allCandidates.length === 0) {

@@ -1,6 +1,6 @@
 {
   "name": "signal-hunter",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AI agent that hunts buying signals across the internet for freelancers and service businesses",
   "type": "module",
   "bin": {
