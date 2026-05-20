@@ -6,21 +6,22 @@ import pc               from 'picocolors';
 import { PKG_DIR, DATA_DIR } from '../utils/paths.js';
 
 const COMMANDS = {
-    setup:    'src/commands/setup.js',
-    doctor:   'src/commands/doctor.js',
-    scan:     'src/commands/scan.js',
-    list:     'src/commands/list.js',
-    insights: 'src/commands/insights.js',
-    cron:     'src/commands/cron.js',
-    auth:     'src/commands/auth.js',
-    reply:    'src/commands/manage.js',
-    skip:     'src/commands/manage.js',
-    open:     'src/commands/manage.js',
-    update:   'src/commands/update.js',
+    setup:     'src/commands/setup.js',
+    doctor:    'src/commands/doctor.js',
+    scan:      'src/commands/scan.js',
+    list:      'src/commands/list.js',
+    insights:  'src/commands/insights.js',
+    dashboard: 'src/commands/dashboard.js',
+    cron:      'src/commands/cron.js',
+    auth:      'src/commands/auth.js',
+    reply:     'src/commands/manage.js',
+    skip:      'src/commands/manage.js',
+    open:      'src/commands/manage.js',
+    update:    'src/commands/update.js',
 };
 
 // These commands run even without a profile.yml
-const NO_PROFILE_NEEDED = new Set(['setup', 'doctor', 'cron', 'update', 'auth', 'version', '-v', '--version']);
+const NO_PROFILE_NEEDED = new Set(['setup', 'doctor', 'cron', 'update', 'auth', 'dashboard', 'version', '-v', '--version']);
 
 const HELP = `
   ${pc.bold(pc.cyan('signal-hunter'))} — AI agent that hunts buying signals for your business
@@ -33,6 +34,7 @@ const HELP = `
     ${pc.cyan('doctor --test-discord')}    Send a real test message to your Discord webhook
     ${pc.cyan('scan')}                     Scan all sources for new buying signals
     ${pc.cyan('list')}                     View your signal pipeline
+    ${pc.cyan('dashboard')}               Open web dashboard (http://localhost:3000)
     ${pc.cyan('insights')}                 Source performance, score stats, recommendations
     ${pc.cyan('auth')} ${pc.dim('<platform>')}        Connect paid platforms: upwork, freelancer
 
