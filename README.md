@@ -120,8 +120,12 @@ signal-hunter version
 | **Remotive** | Contract and freelance tech roles only — full-time pre-filtered |
 | **Remote OK** | Contract/freelance remote jobs — full-time posts removed |
 | **Dev.to** | `#hiring`, `#automation`, `#react`, `#ai` tags |
+| **Jobicy** | Remote dev jobs — keyword-filtered to contract/freelance |
+| **Working Nomads** | Curated remote dev jobs — keyword-filtered to contract/freelance |
+| **We Work Remotely** | Programming category (`enabled: false` by default) |
+| **Himalayas** | Free JSON API, 100k+ listings (`enabled: false` by default) |
 | **GitHub Issues** | Hiring signals in public repos (`enabled: false` by default — flip to `true`) |
-| **RSS / JSON API / Webpage** | Add any source in `sources.yml` — no code needed |
+| **RSS / JSON API / Webpage** | Add any source in `sources.yml` — no code needed. `include_keywords` / `exclude_keywords` pre-filter before AI scoring |
 
 ### Premium (credentials required)
 

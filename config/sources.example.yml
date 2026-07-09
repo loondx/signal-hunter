@@ -55,6 +55,35 @@ devto:
     posts_per_tag: 8
     posts_per_scan: 30
 
+jobicy:
+  type: rss
+  enabled: true
+  # Remote dev jobs — include_keywords pre-filters to contract/freelance work
+  # before AI scoring (full board is mostly full-time)
+  config:
+    url: "https://jobicy.com/?feed=job_feed&job_categories=dev"
+    label: "Jobicy"
+    include_keywords: [contract, freelance, part-time, hourly]
+    posts_per_scan: 15
+
+workingnomads:
+  type: json_api
+  enabled: true
+  # Curated remote dev jobs — keyword-filtered to contract/freelance only
+  config:
+    url: "https://www.workingnomads.com/api/exposed_jobs/"
+    label: "Working Nomads"
+    response_path: "."
+    id_field: "url"
+    text_fields: [title, description, tags, location]
+    url_field: "url"
+    author_field: "company_name"
+    date_field: "pub_date"
+    include_keywords: [contract, freelance, part-time, hourly]
+    extra_params:
+      category: development
+    posts_per_scan: 15
+
 # ── Premium sources — run `signal-hunter auth <platform>` to connect ─────────
 
 upwork:
@@ -87,16 +116,38 @@ freelancer:
     language: en
     posts_per_scan: 20
 
-# ── Generic RSS — add any job board ─────────────────────────────────────────
-# Duplicate this block to add multiple RSS sources.
+# ── Generic RSS / JSON — add any job board ──────────────────────────────────
+# Duplicate these blocks to add more sources. include_keywords /
+# exclude_keywords pre-filter items before AI scoring (case-insensitive).
 
-# weworkremotely:
-#   type: rss
-#   enabled: false
-#   config:
-#     url: "https://weworkremotely.com/categories/remote-programming-jobs.rss"
-#     label: "We Work Remotely"
-#     posts_per_scan: 20
+weworkremotely:
+  type: rss
+  enabled: false
+  # Mostly full-time roles — the keyword filter keeps only contract mentions
+  config:
+    url: "https://weworkremotely.com/categories/remote-programming-jobs.rss"
+    label: "We Work Remotely"
+    include_keywords: [contract, freelance, part-time, hourly]
+    posts_per_scan: 20
+
+himalayas:
+  type: json_api
+  enabled: false
+  # Free JSON API, 100k+ mostly full-time listings — filter keeps contract work
+  config:
+    url: "https://himalayas.app/jobs/api"
+    label: "Himalayas"
+    response_path: "jobs"
+    id_field: "guid"
+    text_fields: [title, excerpt, employmentType, categories]
+    url_field: "guid"
+    author_field: "companyName"
+    date_field: "pubDate"
+    date_unix: true
+    include_keywords: [contract, freelance, part-time, hourly]
+    extra_params:
+      limit: 50
+    posts_per_scan: 15
 
 # nodesk_jobs:
 #   type: rss

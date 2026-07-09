@@ -21,17 +21,16 @@ export function getVersion() {
     }
 }
 
-// Same figlet art as install.sh — one brand everywhere.
+// "SIGNAL" in a solid block font — heavier strokes read clearly at any size.
 const ART = [
-    '   _____ _                   _ _   _             _',
-    '  / ____(_)                 | | | | |           | |',
-    ' | (___  _  __ _ _ __   __ _| | |_| |_   _ _ __ | |_ ___ _ __',
-    "  \\___ \\| |/ _` | '_ \\ / _` | |  _| | | | | '_ \\| __/ _ \\ '__|",
-    '  ____) | | (_| | | | | (_| | | | | | |_| | | | | ||  __/ |',
-    ' |_____/|_|\\__, |_| |_|\\__,_|_|_| |_|\\__,_|_| |_|\\__\\___|_|',
-    '            __/ |',
-    '           |___/',
-].join('\n');
+    '  ███████╗ ██╗  ██████╗  ███╗   ██╗  █████╗  ██╗',
+    '  ██╔════╝ ██║ ██╔════╝  ████╗  ██║ ██╔══██╗ ██║',
+    '  ███████╗ ██║ ██║  ███╗ ██╔██╗ ██║ ███████║ ██║',
+    '  ╚════██║ ██║ ██║   ██║ ██║╚██╗██║ ██╔══██║ ██║',
+    '  ███████║ ██║ ╚██████╔╝ ██║ ╚████║ ██║  ██║ ███████╗',
+    '  ╚══════╝ ╚═╝  ╚═════╝  ╚═╝  ╚═══╝ ╚═╝  ╚═╝ ╚══════╝',
+];
+const ART_WIDTH = 55;
 
 export function brandLine() {
     return `${pc.bold(pc.cyan('signal-hunter'))} ${pc.dim('v' + getVersion())} ${pc.dim('·')} ${pc.magenta('loondx')}`;
@@ -39,10 +38,17 @@ export function brandLine() {
 
 export function banner() {
     if (!process.stdout.isTTY) return '';
+
+    // Narrow terminal → compact one-line brand instead of clipped art
+    if ((process.stdout.columns || 80) < ART_WIDTH + 2) {
+        return `\n  ${pc.bold(pc.cyan('◢ SIGNAL HUNTER'))}  ${pc.dim('v' + getVersion())} ${pc.dim('·')} ${pc.magenta('by loondx')}\n`;
+    }
+
     return [
-        pc.cyan(ART),
         '',
-        `  ${pc.bold('AI agent that hunts buying signals for your business')}`,
+        pc.bold(pc.cyan(ART.join('\n'))),
+        `  ${pc.bold(pc.magenta('H U N T E R'))}  ${pc.dim('—')}  ${pc.bold('find paying clients before the job post')}`,
+        '',
         `  ${pc.dim('v' + getVersion())}  ${pc.dim('·')}  ${pc.magenta('by loondx')}  ${pc.dim('·')}  ${pc.dim('github.com/loondx/signal-hunter')}`,
         '',
     ].join('\n');

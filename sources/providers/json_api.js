@@ -18,10 +18,14 @@
 //   date_field: "published_at"
 //   date_unix: true                                 # if date is a Unix timestamp
 //   label: "My API"
+//   include_keywords: [contract, freelance]         # keep only items containing ANY
+//   exclude_keywords: [internship]                  # drop items containing ANY
 //   posts_per_scan: 20
 //   extra_params:                                   # appended to URL as query params
 //     limit: 20
 //     category: "software-dev"
+
+import { keywordFilter } from './filter.js';
 
 const UA = 'signal-hunter/0.5.0 (+https://github.com/loondx/signal-hunter)';
 
@@ -116,7 +120,11 @@ export async function fetchJsonApi(sourceId, sourceConf) {
         const dateField   = cfg.date_field  || '';
         const dateUnix    = !!cfg.date_unix;
 
-        return items.slice(0, limit).map(item => {
+        // Map more than `limit` when keyword filters are set, so filtering
+        // still leaves up to `limit` matches; hard-cap raw items at 100.
+        const rawCap = (cfg.include_keywords?.length || cfg.exclude_keywords?.length) ? 100 : limit;
+
+        const mapped = items.slice(0, rawCap).map(item => {
             const rawId  = getPath(item, idField);
             const rawUrl = urlTemplate ? interpolate(urlTemplate, item) : getPath(item, urlField) || '';
             const rawDate = dateField ? getPath(item, dateField) : '';
@@ -133,6 +141,8 @@ export async function fetchJsonApi(sourceId, sourceConf) {
                 posted_at: isoDate,
             };
         }).filter(r => r.url && r.text.length > 30);
+
+        return keywordFilter(mapped, cfg).slice(0, limit);
 
     } catch (err) {
         clearTimeout(timer);

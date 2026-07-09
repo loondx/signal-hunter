@@ -7,7 +7,11 @@
 //   label: "My Board"
 //   auth_header_env: "MY_TOKEN"                    # adds Authorization: Bearer <token>
 //   cookie_env: "MY_COOKIE"                        # adds Cookie: <value>
+//   include_keywords: [contract, freelance]        # keep only items containing ANY
+//   exclude_keywords: [internship]                 # drop items containing ANY
 //   posts_per_scan: 20
+
+import { keywordFilter } from './filter.js';
 
 const UA = 'signal-hunter/0.5.0 (+https://github.com/loondx/signal-hunter)';
 
@@ -95,7 +99,7 @@ export async function fetchRss(sourceId, sourceConf) {
         if (!res.ok) return [];
         const xml  = await res.text();
         const items = parseFeed(xml, label);
-        return items.slice(0, limit);
+        return keywordFilter(items, cfg).slice(0, limit);
     } catch (err) {
         clearTimeout(timer);
         if (err.name !== 'AbortError') console.warn(`\n  ${label}: fetch failed — ${err.message}`);

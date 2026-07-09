@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import * as p from '@clack/prompts';
 import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
-import { dump } from 'js-yaml';
+import { dump, load } from 'js-yaml';
 import pc from 'picocolors';
 import { join } from 'path';
 import { DATA_DIR } from '../../utils/paths.js';
 import { printBanner } from '../../utils/banner.js';
+import { appendEnvKey } from '../../utils/env-writer.js';
 
 function onCancel() {
     p.cancel('Setup cancelled. Run `signal-hunter setup` whenever you\'re ready.');
@@ -28,16 +29,32 @@ console.log('');
 printBanner();
 p.intro(pc.bgCyan(pc.black('  Signal Hunter — Setup  ')));
 
-if (existsSync(join(DATA_DIR, 'config/profile.yml'))) {
-    const overwrite = guard(await p.confirm({
-        message: 'A profile already exists. Overwrite it?',
-        initialValue: false,
+// Load the existing profile on re-runs so setup can UPDATE it in place
+// (every prompt pre-filled with the current answer) instead of starting over.
+const profilePath = join(DATA_DIR, 'config/profile.yml');
+let existing = null;
+if (existsSync(profilePath)) {
+    try { existing = load(readFileSync(profilePath, 'utf8')) || null; } catch { existing = null; }
+}
+
+if (existing) {
+    const mode = guard(await p.select({
+        message: 'A profile already exists. What do you want to do?',
+        options: [
+            { value: 'update', label: 'Update it',   hint: 'recommended — answers pre-filled, Enter keeps them' },
+            { value: 'fresh',  label: 'Start fresh', hint: 'blank wizard, replaces the current profile' },
+            { value: 'cancel', label: 'Keep as is',  hint: 'exit without changing anything' },
+        ],
+        initialValue: 'update',
     }));
-    if (!overwrite) { p.outro('Setup skipped — your existing config is unchanged.'); process.exit(0); }
+    if (mode === 'cancel') { p.outro('Setup skipped — your existing config is unchanged.'); process.exit(0); }
+    if (mode === 'fresh')  existing = null;
 }
 
 p.note(
-    'Takes ~3 minutes.\nEverything stays on your machine — nothing is sent anywhere.',
+    (existing ? 'Updating your existing profile — press Enter to keep any current answer.'
+              : 'Takes ~3 minutes.')
+    + '\nEverything stays on your machine — nothing is sent anywhere.',
     'Getting started'
 );
 
@@ -46,11 +63,13 @@ const identity = await p.group({
     name: () => p.text({
         message: 'Your name or company name:',
         placeholder: 'Pankaj / Loondx',
+        initialValue: existing?.identity?.name || '',
         validate: (v) => !v?.trim() ? 'Required' : undefined,
     }),
     email: () => p.text({
         message: 'Your email (for notifications):',
         placeholder: 'you@example.com',
+        initialValue: existing?.identity?.email || '',
     }),
     type: () => p.select({
         message: 'What best describes you?',
@@ -59,6 +78,7 @@ const identity = await p.group({
             { value: 'agency',     label: 'Small agency',   hint: 'service business with a team' },
             { value: 'both',       label: 'Both',           hint: 'I freelance + have partner businesses' },
         ],
+        initialValue: existing?.identity?.type,
     }),
 }, { onCancel });
 
@@ -72,20 +92,24 @@ const services = await p.group({
     what_you_do: () => p.text({
         message: 'What do you build / offer? (one line)',
         placeholder: 'React apps, n8n automation, AI agents, Discord bots for small businesses',
+        initialValue: existing?.services?.what_you_do || '',
         validate: (v) => !v?.trim() ? 'Required' : undefined,
     }),
     buying_signals: () => p.text({
         message: 'What problems do your clients have?',
         placeholder: 'Manual workflows, need a bot, want AI integrated, building MVP, need API connected',
+        initialValue: existing?.services?.buying_signals || '',
         validate: (v) => !v?.trim() ? 'Required' : undefined,
     }),
     red_flags: () => p.text({
         message: 'What should the AI skip? (comma-separated)',
         placeholder: 'equity only, gambling, adult content, homework, crypto token',
+        initialValue: Array.isArray(existing?.services?.red_flags) ? existing.services.red_flags.join(', ') : '',
     }),
     budget_min: () => p.text({
         message: 'Minimum project budget? (filters low-value signals)',
         placeholder: '$300',
+        initialValue: existing?.services?.budget_min || '',
     }),
 }, { onCancel });
 
@@ -95,22 +119,32 @@ p.note(
     'Step 3 of 6 — Free Sources'
 );
 
+const FREE_SOURCE_NAMES    = ['hackernews', 'reddit', 'remoteok', 'remotive', 'devto', 'custom', 'twitter'];
+const FREE_SOURCE_DEFAULTS = ['hackernews', 'reddit', 'remoteok', 'remotive', 'devto'];
+const enabledBefore        = Array.isArray(existing?.sources?.enabled) ? existing.sources.enabled : null;
+
 const freeSources = guard(await p.multiselect({
     message: 'Select free sources to monitor:',
     options: [
-        { value: 'hackernews', label: 'Hacker News',  hint: '"Who is Hiring?" + discussions · free · no auth',      selected: true  },
-        { value: 'reddit',     label: 'Reddit',       hint: 'r/forhire, r/freelance + custom subs · free · no auth', selected: true  },
-        { value: 'remoteok',   label: 'Remote OK',    hint: 'remote job board · free open API',                      selected: true  },
-        { value: 'remotive',   label: 'Remotive',     hint: 'curated remote jobs · free API',                        selected: true  },
-        { value: 'devto',      label: 'Dev.to',       hint: '#hiring #webdev #automation · free API · no auth',      selected: true  },
-        { value: 'custom',     label: 'Custom URLs',  hint: 'any webpage via Jina.ai reader · free · no auth',       selected: false },
-        { value: 'twitter',    label: 'Twitter / X',  hint: 'requires TWITTER_BEARER_TOKEN in .env',                 selected: false },
+        { value: 'hackernews', label: 'Hacker News',  hint: '"Who is Hiring?" + discussions · free · no auth' },
+        { value: 'reddit',     label: 'Reddit',       hint: 'r/forhire, r/freelance + custom subs · free · no auth' },
+        { value: 'remoteok',   label: 'Remote OK',    hint: 'remote job board · free open API' },
+        { value: 'remotive',   label: 'Remotive',     hint: 'curated remote jobs · free API' },
+        { value: 'devto',      label: 'Dev.to',       hint: '#hiring #webdev #automation · free API · no auth' },
+        { value: 'custom',     label: 'Custom URLs',  hint: 'any webpage via Jina.ai reader · free · no auth' },
+        { value: 'twitter',    label: 'Twitter / X',  hint: 'requires TWITTER_BEARER_TOKEN in .env' },
     ],
+    initialValues: enabledBefore
+        ? enabledBefore.filter((s) => FREE_SOURCE_NAMES.includes(s))
+        : FREE_SOURCE_DEFAULTS,
     required: true,
 }));
 
 // Reddit subreddits
-let redditSubs = 'forhire,freelance_forhire,for_hire,hiring,DeveloperJobs,startups,SaaS,Entrepreneur,n8n,automation,nocode,webdev,reactjs';
+const DEFAULT_SUBS = 'forhire,freelance_forhire,for_hire,hiring,DeveloperJobs,startups,SaaS,Entrepreneur,n8n,automation,nocode,webdev,reactjs';
+let redditSubs = Array.isArray(existing?.sources?.reddit?.subreddits) && existing.sources.reddit.subreddits.length
+    ? existing.sources.reddit.subreddits.join(',')
+    : DEFAULT_SUBS;
 if (freeSources.includes('reddit')) {
     const subs = guard(await p.text({
         message: 'Subreddits to watch? (comma-separated, no "r/")',
@@ -126,14 +160,18 @@ p.note(
     'Step 4 of 6 — Premium Sources (Optional)'
 );
 
+const PREMIUM_SOURCE_NAMES = ['upwork', 'freelancer', 'peopleperhour', 'websearch'];
+
 const premiumSources = guard(await p.multiselect({
     message: 'Connect premium job platforms: (space to select, enter to skip all)',
     options: [
-        { value: 'upwork',         label: 'Upwork',         hint: 'biggest freelance platform · needs your RSS URL',         selected: false },
-        { value: 'freelancer',     label: 'Freelancer.com', hint: 'active project marketplace · optional OAuth token',       selected: false },
-        { value: 'peopleperhour',  label: 'PeoplePerHour',  hint: 'UK/EU clients · no auth needed',                          selected: false },
-        { value: 'websearch',      label: 'Web Search',     hint: 'searches entire internet · needs free Brave/Serper key',  selected: false },
+        { value: 'upwork',         label: 'Upwork',         hint: 'biggest freelance platform · needs your RSS URL' },
+        { value: 'freelancer',     label: 'Freelancer.com', hint: 'active project marketplace · optional OAuth token' },
+        { value: 'peopleperhour',  label: 'PeoplePerHour',  hint: 'UK/EU clients · no auth needed' },
+        { value: 'websearch',      label: 'Web Search',     hint: 'searches entire internet · needs free Brave/Serper key' },
     ],
+    initialValues: enabledBefore ? enabledBefore.filter((s) => PREMIUM_SOURCE_NAMES.includes(s)) : [],
+    required: false,
 }));
 
 const envLines = [
@@ -251,6 +289,7 @@ const llmProvider = guard(await p.select({
         { value: 'openai', label: 'OpenAI GPT-4o-mini',     hint: 'paid · fast and accurate' },
         { value: 'ollama', label: 'Ollama (local)',          hint: 'free · fully private · runs on your machine' },
     ],
+    initialValue: existing?.llm?.provider,
 }));
 
 const LLM_MODELS = {
@@ -290,15 +329,15 @@ p.note(
 
 const wantsDiscord = guard(await p.confirm({
     message: 'Send high-score signals to Discord?',
-    initialValue: true,
+    initialValue: existing ? Boolean(existing.notifications?.discord_webhook) : true,
 }));
 
 let discordWebhook = '';
 if (wantsDiscord) {
-    const existing = process.env.DISCORD_WEBHOOK_URL;
-    if (existing?.startsWith('https://discord.com/api/webhooks/')) {
+    const known = process.env.DISCORD_WEBHOOK_URL || existing?.notifications?.discord_webhook;
+    if (known?.startsWith('https://discord.com/api/webhooks/')) {
         const reuse = guard(await p.confirm({ message: 'Found existing Discord webhook. Use it?', initialValue: true }));
-        if (reuse) discordWebhook = existing;
+        if (reuse) discordWebhook = known;
     }
     if (!discordWebhook) {
         discordWebhook = guard(await p.text({
@@ -321,7 +360,7 @@ const notifyScore = guard(await p.select({
         { value: 70, label: 'Score 70+', hint: 'less noise — only strong leads' },
         { value: 80, label: 'Score 80+', hint: 'minimal pings — hot leads only' },
     ],
-    initialValue: 65,
+    initialValue: existing?.notifications?.notify_min_score ?? 65,
 }));
 
 // Cron interval — dynamic, stored in profile
@@ -336,7 +375,7 @@ const cronInterval = guard(await p.select({
         { value: '12h',  label: 'Twice a day',        hint: 'morning + evening scan' },
         { value: '24h',  label: 'Once a day',         hint: 'daily digest' },
     ],
-    initialValue: '30m',
+    initialValue: existing?.automation?.cron_interval ?? '30m',
 }));
 
 const minScore = guard(await p.select({
@@ -347,7 +386,7 @@ const minScore = guard(await p.select({
         { value: 60, label: 'Score 60+', hint: 'only solid leads' },
         { value: 70, label: 'Score 70+', hint: 'strict — high-confidence only' },
     ],
-    initialValue: 55,
+    initialValue: existing?.llm?.min_score ?? 55,
 }));
 
 // ── Write config files ────────────────────────────────────────────────────────
@@ -363,14 +402,23 @@ const allEnabled = [
     ...premiumSourcesEnabled,
 ];
 
+// When updating, keep a hand-picked model if the provider didn't change,
+// and merge over the old profile so custom keys added by hand survive.
+const llmModel = (existing?.llm?.provider === llmProvider && existing?.llm?.model)
+    ? existing.llm.model
+    : LLM_MODELS[llmProvider];
+
 const profile = {
+    ...(existing || {}),
     version: '1',
     identity: {
+        ...(existing?.identity || {}),
         name:  identity.name.trim(),
         email: identity.email?.trim() || '',
         type:  identity.type,
     },
     services: {
+        ...(existing?.services || {}),
         what_you_do:    services.what_you_do.trim(),
         buying_signals: services.buying_signals.trim(),
         red_flags: services.red_flags
@@ -379,34 +427,48 @@ const profile = {
         budget_min: services.budget_min?.trim() || '$300',
     },
     llm: {
+        ...(existing?.llm || {}),
         provider:  llmProvider,
-        model:     LLM_MODELS[llmProvider],
+        model:     llmModel,
         min_score: minScore,
     },
     sources: {
+        ...(existing?.sources || {}),
         enabled: allEnabled,
         reddit: {
+            ...(existing?.sources?.reddit || {}),
             subreddits: redditSubs.split(',').map(v => v.trim().replace(/^r\//, '')).filter(Boolean),
         },
     },
     notifications: {
+        ...(existing?.notifications || {}),
         discord_webhook:  discordWebhook || '',
         email:            identity.email?.trim() || '',
         notify_min_score: notifyScore,
     },
     automation: {
+        ...(existing?.automation || {}),
         cron_interval: cronInterval,
     },
 };
 
-writeFileSync(join(DATA_DIR, 'config/profile.yml'), dump(profile, { lineWidth: 120 }));
+writeFileSync(profilePath, dump(profile, { lineWidth: 120 }));
 
 // Build .env
 if (llmProvider !== 'ollama') envLines.push(`${keyName}=${apiKey}`);
 if (llmProvider === 'ollama')  envLines.push('OLLAMA_BASE_URL=http://localhost:11434');
-if (discordWebhook)            { envLines.push(''); envLines.push(`DISCORD_WEBHOOK_URL=${discordWebhook}`); }
+if (discordWebhook)            envLines.push(`DISCORD_WEBHOOK_URL=${discordWebhook}`);
 
-writeFileSync(join(DATA_DIR, '.env'), envLines.join('\n') + '\n');
+// Upsert into an existing .env (keeps keys setup doesn't know about,
+// e.g. TWITTER_BEARER_TOKEN or tokens saved by `auth`); write fresh otherwise.
+if (existsSync(join(DATA_DIR, '.env'))) {
+    for (const line of envLines) {
+        const eq = line.indexOf('=');
+        if (eq > 0 && !line.startsWith('#')) appendEnvKey(line.slice(0, eq), line.slice(eq + 1));
+    }
+} else {
+    writeFileSync(join(DATA_DIR, '.env'), envLines.join('\n') + '\n');
+}
 
 // Write data files if first setup
 if (!existsSync(join(DATA_DIR, 'data/signals.md'))) {
@@ -429,7 +491,7 @@ const sourceList = allEnabled.join(', ');
 
 p.note(
     [
-        `${pc.green('✓')} Profile    ${pc.dim(join(DATA_DIR, 'config/profile.yml'))}`,
+        `${pc.green('✓')} Profile ${existing ? 'updated' : 'created'}  ${pc.dim(join(DATA_DIR, 'config/profile.yml'))}`,
         `${pc.green('✓')} API Keys   ${pc.dim(join(DATA_DIR, '.env'))} ${pc.dim('(gitignored)')}`,
         `${pc.green('✓')} Sources    ${pc.cyan(sourceList)}`,
         `${pc.green('✓')} Scan every ${pc.cyan(cronInterval)} · Notify at ${pc.cyan('score ' + notifyScore + '+')}`,
