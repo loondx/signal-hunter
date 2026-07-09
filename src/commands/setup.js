@@ -5,6 +5,7 @@ import { dump } from 'js-yaml';
 import pc from 'picocolors';
 import { join } from 'path';
 import { DATA_DIR } from '../../utils/paths.js';
+import { printBanner } from '../../utils/banner.js';
 
 function onCancel() {
     p.cancel('Setup cancelled. Run `signal-hunter setup` whenever you\'re ready.');
@@ -24,6 +25,7 @@ if (existsSync(join(DATA_DIR, '.env'))) {
 }
 
 console.log('');
+printBanner();
 p.intro(pc.bgCyan(pc.black('  Signal Hunter — Setup  ')));
 
 if (existsSync(join(DATA_DIR, 'config/profile.yml'))) {

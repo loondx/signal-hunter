@@ -165,10 +165,15 @@ fi
 cat > "$BIN_DIR/signal-hunter" << WRAPPER
 #!/usr/bin/env bash
 export SIGNAL_HUNTER_HOME="\${SIGNAL_HUNTER_HOME:-${INSTALL_DIR}}"
+export SIGNAL_HUNTER_BIN="\$(basename "\$0")"
 exec node "\$SIGNAL_HUNTER_HOME/bin/cli.js" "\$@"
 WRAPPER
 chmod +x "$BIN_DIR/signal-hunter"
 ok "CLI created at ${CYAN}${BIN_DIR}/signal-hunter${RESET}"
+
+# Short alias — `loondx` runs the same CLI
+ln -sf "$BIN_DIR/signal-hunter" "$BIN_DIR/loondx"
+ok "Short alias: ${CYAN}loondx${RESET}"
 
 # ── PATH setup ────────────────────────────────────────────────────────────────
 PATH_LINE="export PATH=\"\$HOME/.local/bin:\$HOME/bin:\$PATH\""
@@ -213,7 +218,7 @@ printf "  ${GREEN}${BOLD}✓  Signal Hunter installed!${RESET}\n\n"
 printf "  Installed to:  ${DIM}%s${RESET}\n"   "$INSTALL_DIR"
 printf "  Config + data: ${DIM}%s/config${RESET}\n\n" "$INSTALL_DIR"
 printf "  ${BOLD}Next step — run the setup wizard:${RESET}\n\n"
-printf "    ${CYAN}${BOLD}signal-hunter setup${RESET}\n\n"
+printf "    ${CYAN}${BOLD}signal-hunter setup${RESET}   ${DIM}(or the short alias: ${RESET}${CYAN}loondx setup${RESET}${DIM})${RESET}\n\n"
 printf "  ${DIM}Other: signal-hunter doctor  |  signal-hunter scan  |  signal-hunter --help${RESET}\n\n"
 hr
 printf "\n"

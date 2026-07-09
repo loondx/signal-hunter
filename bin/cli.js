@@ -1,9 +1,18 @@
 #!/usr/bin/env node
 import { spawn }        from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import { join }         from 'path';
+import { existsSync }   from 'fs';
+import { join, basename } from 'path';
 import pc               from 'picocolors';
 import { PKG_DIR, DATA_DIR } from '../utils/paths.js';
+import { banner, brandLine } from '../utils/banner.js';
+
+// The CLI is installed as both `signal-hunter` and the short alias `loondx`.
+// Show help/examples under whichever name the user actually typed.
+// Shell wrappers pass the typed name via SIGNAL_HUNTER_BIN; npm bin shims
+// are detected from argv[1].
+const INVOKED = (process.env.SIGNAL_HUNTER_BIN || basename(process.argv[1] || 'signal-hunter'))
+    .replace(/\.(cmd|ps1|js)$/i, '');
+const BIN     = INVOKED === 'loondx' ? 'loondx' : 'signal-hunter';
 
 const COMMANDS = {
     setup:     'src/commands/setup.js',
@@ -24,9 +33,10 @@ const COMMANDS = {
 const NO_PROFILE_NEEDED = new Set(['setup', 'doctor', 'cron', 'update', 'auth', 'dashboard', 'version', '-v', '--version']);
 
 const HELP = `
-  ${pc.bold(pc.cyan('signal-hunter'))} — AI agent that hunts buying signals for your business
+  ${pc.bold(pc.cyan(BIN))} — AI agent that hunts buying signals for your business
 
-  ${pc.bold('Usage:')}  signal-hunter <command> [options]
+  ${pc.bold('Usage:')}  ${BIN} <command> [options]
+          ${pc.dim(`(also available as ${BIN === 'loondx' ? 'signal-hunter' : 'loondx'})`)}
 
   ${pc.bold('Core:')}
     ${pc.cyan('setup')}                    Interactive setup wizard ${pc.dim('(run this first)')}
@@ -69,26 +79,39 @@ const HELP = `
 const cmd = process.argv[2];
 
 // ── version ───────────────────────────────────────────────────────────────────
-if (!cmd || cmd === 'version' || cmd === '--version' || cmd === '-v') {
-    if (!cmd) { console.log(HELP); process.exit(0); }
-    try {
-        const pkg = JSON.parse(readFileSync(join(PKG_DIR, 'package.json'), 'utf8'));
-        console.log(`\n  signal-hunter v${pkg.version}  ${pc.dim('(' + PKG_DIR + ')')}\n`);
-    } catch {
-        console.log('\n  signal-hunter (version unknown)\n');
-    }
+if (cmd === 'version' || cmd === '--version' || cmd === '-v') {
+    console.log(`\n  ${brandLine()}  ${pc.dim('(' + PKG_DIR + ')')}\n`);
     process.exit(0);
 }
 
-if (cmd === 'help' || cmd === '--help' || cmd === '-h') {
-    console.log(HELP);
+if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
+    console.log(banner() + HELP);
     process.exit(0);
+}
+
+// Suggest the closest command on a typo (e.g. "sacn" → "scan")
+function suggest(input) {
+    const names = [...Object.keys(COMMANDS), 'help', 'version'];
+    const dist = (a, b) => {
+        const m = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+        for (let j = 0; j <= b.length; j++) m[0][j] = j;
+        for (let i = 1; i <= a.length; i++)
+            for (let j = 1; j <= b.length; j++)
+                m[i][j] = Math.min(m[i - 1][j] + 1, m[i][j - 1] + 1, m[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        return m[a.length][b.length];
+    };
+    const best = names
+        .map((n) => ({ n, d: dist(input.toLowerCase(), n) }))
+        .sort((x, y) => x.d - y.d)[0];
+    return best && best.d <= 2 ? best.n : null;
 }
 
 const script = COMMANDS[cmd];
 if (!script) {
-    console.error(`\n  ${pc.red(`✗ Unknown command: "${cmd}"`)}\n`);
-    console.log(HELP);
+    console.error(`\n  ${pc.red(`✗ Unknown command: "${cmd}"`)}`);
+    const near = suggest(cmd);
+    if (near) console.error(`\n  Did you mean ${pc.cyan(`${BIN} ${near}`)}?\n`);
+    else console.log(HELP);
     process.exit(1);
 }
 
@@ -99,7 +122,7 @@ if (!NO_PROFILE_NEEDED.has(cmd) && !existsSync(join(DATA_DIR, 'config/profile.ym
   ${pc.dim(`Expected: ${DATA_DIR}/config/profile.yml`)}
   ${pc.dim('Run the setup wizard:')}
 
-    ${pc.cyan('signal-hunter setup')}
+    ${pc.cyan(`${BIN} setup`)}
 `);
     process.exit(1);
 }

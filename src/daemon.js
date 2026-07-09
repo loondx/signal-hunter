@@ -25,6 +25,29 @@ function toCronExpr(interval) {
     return '*/30 * * * *';
 }
 
+let scanRunning   = false;
+let failureStreak = 0;
+
+async function runScan() {
+    // Overlap guard: if a scan outlives the interval, skip this tick instead
+    // of stacking a second scan on top of it.
+    if (scanRunning) {
+        logger.warn('Cron: previous scan still running — skipping this tick');
+        return;
+    }
+    scanRunning = true;
+    try {
+        const code = await spawnScan();
+        if (code === 0) {
+            failureStreak = 0;
+        } else if (++failureStreak >= 3) {
+            logger.error(`Cron: ${failureStreak} scans failed in a row — check \`signal-hunter doctor\` and ${join(DATA_DIR, 'logs')}`);
+        }
+    } finally {
+        scanRunning = false;
+    }
+}
+
 function spawnScan() {
     return new Promise((resolve) => {
         logger.info('Cron: spawning scan...');
@@ -37,6 +60,10 @@ function spawnScan() {
         child.on('error', (err)  => { logger.error(`Cron: spawn error: ${err.message}`); resolve(1); });
     });
 }
+
+// The loop must never die silently: log and keep ticking.
+process.on('uncaughtException',  (err) => logger.error(`Cron: uncaught exception: ${err.stack || err.message}`));
+process.on('unhandledRejection', (err) => logger.error(`Cron: unhandled rejection: ${err?.stack || err}`));
 
 const args     = process.argv.slice(2);
 const interval = argValue(args, '--interval') || '30m';
@@ -70,5 +97,5 @@ if (!IS_WIN) {
     process.on('SIGBREAK', shutdown); // Windows Ctrl+Break equivalent
 }
 
-await spawnScan();
-cron.schedule(cronExpr, spawnScan);
+await runScan();
+cron.schedule(cronExpr, runScan);

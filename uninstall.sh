@@ -29,12 +29,14 @@ if [ -d "$INSTALL_DIR" ]; then
     printf "  ✓  Removed %s\n" "$INSTALL_DIR"
 fi
 
-# Remove binary from known bin locations
+# Remove binaries from known bin locations (incl. the `loondx` alias)
 for dir in "${BIN_DIRS[@]}"; do
-    if [ -f "$dir/signal-hunter" ]; then
-        rm -f "$dir/signal-hunter"
-        printf "  ✓  Removed %s/signal-hunter\n" "$dir"
-    fi
+    for bin in signal-hunter loondx; do
+        if [ -f "$dir/$bin" ] || [ -L "$dir/$bin" ]; then
+            rm -f "$dir/$bin"
+            printf "  ✓  Removed %s/%s\n" "$dir" "$bin"
+        fi
+    done
 done
 
 printf "\n  Signal Hunter removed.\n"

@@ -62,6 +62,8 @@ signal-hunter reply 1    # AI outreach package — copy-paste ready
 signal-hunter cron start # run automatically in the background
 ```
 
+> **Short alias:** every command also works as `loondx` — e.g. `loondx scan`, `loondx list`.
+
 ---
 
 ## Commands

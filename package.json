@@ -5,6 +5,7 @@
   "type": "module",
   "bin": {
     "signal-hunter": "./bin/cli.js",
+    "loondx": "./bin/cli.js",
     "signal-hunter-mcp": "./src/mcp-server.js"
   },
   "scripts": {

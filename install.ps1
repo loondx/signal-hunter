@@ -78,14 +78,18 @@ ok "Dependencies installed"
 # ── Create bin directory and .cmd wrapper ────────────────────────────────────
 New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
 
-$wrapperCmd = "@echo off`r`nset SIGNAL_HUNTER_HOME=$InstallDir`r`nnode ""%SIGNAL_HUNTER_HOME%\bin\cli.js"" %*`r`n"
+$wrapperCmd = "@echo off`r`nset SIGNAL_HUNTER_HOME=$InstallDir`r`nset SIGNAL_HUNTER_BIN=%~n0`r`nnode ""%SIGNAL_HUNTER_HOME%\bin\cli.js"" %*`r`n"
 $wrapperCmd | Set-Content (Join-Path $BinDir 'signal-hunter.cmd') -Encoding ASCII
 
 # PowerShell wrapper (for running in PS without the .cmd extension)
-$wrapperPs1 = "`$env:SIGNAL_HUNTER_HOME = '$InstallDir'`nnode `"`$env:SIGNAL_HUNTER_HOME\bin\cli.js`" @args`n"
+$wrapperPs1 = "`$env:SIGNAL_HUNTER_HOME = '$InstallDir'`n`$env:SIGNAL_HUNTER_BIN = `$MyInvocation.MyCommand.Name`nnode `"`$env:SIGNAL_HUNTER_HOME\bin\cli.js`" @args`n"
 $wrapperPs1 | Set-Content (Join-Path $BinDir 'signal-hunter.ps1') -Encoding UTF8
 
-ok "CLI created at $BinDir\signal-hunter.cmd"
+# Short alias — `loondx` runs the same CLI
+$wrapperCmd | Set-Content (Join-Path $BinDir 'loondx.cmd') -Encoding ASCII
+$wrapperPs1 | Set-Content (Join-Path $BinDir 'loondx.ps1') -Encoding UTF8
+
+ok "CLI created at $BinDir\signal-hunter.cmd (short alias: loondx)"
 
 # ── Add BinDir to User PATH ───────────────────────────────────────────────────
 $currentPath = [Environment]::GetEnvironmentVariable('Path', 'User') ?? ''
